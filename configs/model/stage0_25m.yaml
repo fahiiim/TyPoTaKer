@@ -1,0 +1,25 @@
+# Stage 0 — first 6-hour budget. Resume-safe. Grow later via stage1.
+name: typoformer_stage0_25m
+architecture: typoformer
+vocab_size: 16000
+d_model: 384
+n_layers: 8
+n_heads: 6
+n_kv_heads: 2
+ffn_hidden: 1536
+max_seq_len: 256
+dropout: 0.0
+rope_theta: 10000.0
+tie_embeddings: true
+# Character stream (typo robustness without a huge vocab)
+char_vocab_size: 128
+char_dim: 32
+max_chars_per_token: 16
+# Compact GECToR-style edit head (not full-vocab REPLACE)
+n_replace_classes: 2048
+n_append_classes: 2048
+# Residual mix of char features
+char_gate_init: 0.1
+qk_norm: true
+# Training-only multi-token prediction (t+2, t+3). Tiny d×d adapters, shared LM head.
+n_mtp: 2
