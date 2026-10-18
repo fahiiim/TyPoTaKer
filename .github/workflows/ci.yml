@@ -1,0 +1,20 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install CPU torch and package
+        run: |
+          pip install pyyaml numpy tqdm pytest tokenizers
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -e .
+      - run: pytest -q
+      - run: python -m typotaker count-params --config configs/model/stage0_25m.yaml
