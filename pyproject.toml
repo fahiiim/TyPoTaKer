@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "typotaker"
+version = "0.1.0"
+description = "Tiny, CUDA-efficient typo/grammar corrector and next-word model with resumable staged training."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+authors = [{ name = "TyPoTaKer contributors" }]
+keywords = ["nlp", "grammar", "typo", "language-model", "onnx", "desktop"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+  "torch>=2.7.0",
+  "tokenizers>=0.20.0",
+  "pyyaml>=6.0",
+  "numpy>=1.26",
+  "tqdm>=4.66",
+]
+
+[project.optional-dependencies]
+data = ["datasets>=3.0.0", "huggingface_hub>=0.25.0"]
+export = ["onnx>=1.16.0", "onnxruntime>=1.19.0"]
+dev = ["pytest>=8.0", "ruff>=0.6.0"]
+
+[project.scripts]
+typotaker = "typotaker.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/typotaker/typotaker"
+Issues = "https://github.com/typotaker/typotaker/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "W"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
