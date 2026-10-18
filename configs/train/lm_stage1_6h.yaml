@@ -1,0 +1,32 @@
+task: lm
+run_name: lm_stage1
+model: configs/model/stage1_40m.yaml
+data:
+  train_paths:
+    - data/processed/lm/train.jsonl
+  tokenizer_path: data/tokenizer/tokenizer.json
+  seq_len: 256
+  pack_sequences: true
+optim:
+  # Lower LR than Stage 0 because most of the Stage 1 model is transferred.
+  lr: 0.0003
+  weight_decay: 0.1
+  betas: [0.9, 0.95]
+  warmup_steps: 500
+  max_steps: 20000
+  grad_clip: 1.0
+train:
+  # Keep the same effective batch/token budget as Stage 0 while fitting the wider model.
+  micro_batch_size: 16
+  grad_accum: 8
+  amp_dtype: bf16
+  compile: true
+  compile_mode: default
+  seed: 42
+  max_hours: 6.0
+  log_every: 20
+  save_every_steps: 400
+  keep_last: 4
+  checkpoint_dir: checkpoints
+  resume: auto
+  num_workers: 0

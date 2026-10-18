@@ -1,5 +1,5 @@
-# Stage 1 — grow depth 6→8 and width 384→512 from a Stage 0 checkpoint.
-#   python -m typotaker grow --from checkpoints/<run>/latest --config configs/model/stage1_40m.yaml
+# Stage 1 — grow depth 8→10 and width 384→512 from a Stage 0 checkpoint.
+#   python -m typotaker grow --src checkpoints/lm_stage0 --config configs/model/stage1_40m.yaml --run-name lm_stage1
 name: typoformer_stage1_40m
 architecture: typoformer
 vocab_size: 16000
