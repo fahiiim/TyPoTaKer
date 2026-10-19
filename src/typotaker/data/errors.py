@@ -57,12 +57,42 @@ def _typo_word(word: str, rng: random.Random) -> str:
     return "".join(chars)
 
 
+def _split_tokens(text: str) -> tuple[list[str], list[str]]:
+    """Split text while retaining every separator exactly."""
+    matches = list(re.finditer(r"\w+|[^\w\s]", text))
+    if not matches:
+        return [], [text]
+    tokens = [m.group(0) for m in matches]
+    gaps = [text[: matches[0].start()]]
+    gaps.extend(text[a.end() : b.start()] for a, b in zip(matches, matches[1:]))
+    gaps.append(text[matches[-1].end() :])
+    return tokens, gaps
+
+
+def _merge_deleted_gaps(left: str, right: str) -> str:
+    if left.isspace() and right.isspace():
+        if "\n" in left or "\n" in right:
+            return "\n\n" if "\n\n" in left + right else "\n"
+        return " " if left or right else ""
+    return left + right
+
+
+def _delete_token(tokens: list[str], gaps: list[str], index: int) -> None:
+    tokens.pop(index)
+    gaps[index] = _merge_deleted_gaps(gaps[index], gaps[index + 1])
+    gaps.pop(index + 1)
+
+
+def _render_tokens(tokens: list[str], gaps: list[str]) -> str:
+    return "".join(gap + token for gap, token in zip(gaps, tokens)) + gaps[-1]
+
+
 def corrupt_sentence(text: str, rng: random.Random | None = None, p: float = 0.7) -> str:
     """Return a noisy version. ~30% of sentences stay clean (identity KEEP training)."""
     rng = rng or random.Random()
     if rng.random() > p:
         return text
-    words = re.findall(r"\w+|[^\w\s]", text)
+    words, gaps = _split_tokens(text)
     if not words:
         return text
     n_ops = rng.randint(1, 3)
@@ -71,18 +101,20 @@ def corrupt_sentence(text: str, rng: random.Random | None = None, p: float = 0.7
             ["typo", "confusion", "drop_article", "prep", "case", "sv_s"]
         )
         if op == "typo":
-            idx = rng.randrange(len(words))
+            candidates = [i for i, word in enumerate(words) if word.isalpha() and len(word) >= 3]
+            if not candidates:
+                continue
+            idx = rng.choice(candidates)
             words[idx] = _typo_word(words[idx], rng)
         elif op == "confusion":
-            joined = " ".join(words)
             src, dst = rng.choice(CONFUSIONS)
-            if re.search(rf"\b{re.escape(src)}\b", joined, flags=re.I):
-                joined = re.sub(rf"\b{re.escape(src)}\b", dst, joined, count=1, flags=re.I)
-                words = re.findall(r"\w+|[^\w\s]", joined)
+            candidates = [i for i, word in enumerate(words) if word.lower() == src.lower()]
+            if candidates:
+                words[rng.choice(candidates)] = dst
         elif op == "drop_article":
             arts = [i for i, w in enumerate(words) if w.lower() in ARTICLES]
             if arts:
-                del words[rng.choice(arts)]
+                _delete_token(words, gaps, rng.choice(arts))
         elif op == "prep":
             idxs = [i for i, w in enumerate(words) if w.lower() in PREP]
             if idxs:
@@ -97,9 +129,4 @@ def corrupt_sentence(text: str, rng: random.Random | None = None, p: float = 0.7
             if cands:
                 i = rng.choice(cands)
                 words[i] = words[i][:-1] if words[i].endswith("s") else words[i] + "s"
-    out = ""
-    for i, w in enumerate(words):
-        if i > 0 and re.match(r"\w", w) and re.match(r"\w", words[i - 1]):
-            out += " "
-        out += w
-    return out
+    return _render_tokens(words, gaps)
