@@ -57,6 +57,8 @@ def correct_sentence(
     tok: TypoTokenizer,
     text: str,
     maps_path: str,
+    min_edit_prob: float = 0.0,
+    edit_margin: float = 0.0,
 ) -> str:
     id_to_replace, id_to_append = _invert_maps(maps_path)
     ids = tok.encode(text, add_special=True)
@@ -69,7 +71,16 @@ def correct_sentence(
         task="gec",
         pad_id=tok.pad_id,
     )["edit_logits"][0]
-    labels = logits.argmax(dim=-1).tolist()
+    probs = torch.softmax(logits.float(), dim=-1)
+    labels = probs.argmax(dim=-1).tolist()
+    keep_probs = probs[:, KEEP]
+    best_probs = probs.gather(1, probs.argmax(dim=-1, keepdim=True)).squeeze(1)
+    for i, lab in enumerate(labels):
+        if lab != KEEP and (
+            float(best_probs[i]) < min_edit_prob
+            or float(best_probs[i] - keep_probs[i]) < edit_margin
+        ):
+            labels[i] = KEEP
     n_replace = model.cfg.n_replace_classes
     new_ids: list[int] = []
     for tid, lab, piece in zip(ids, labels, pieces):
