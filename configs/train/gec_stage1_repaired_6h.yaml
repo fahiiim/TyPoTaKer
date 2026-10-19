@@ -1,0 +1,34 @@
+task: gec
+run_name: gec_stage1_repaired
+model: configs/model/stage1_40m.yaml
+init_from: checkpoints/lm_stage1
+data:
+  train_paths:
+    - data/processed/gec/repaired/train.jsonl
+  tokenizer_path: data/tokenizer/tokenizer.json
+  seq_len: 128
+  pack_sequences: false
+optim:
+  lr: 0.0002
+  weight_decay: 0.05
+  betas: [0.9, 0.95]
+  warmup_steps: 300
+  max_steps: 12000
+  grad_clip: 1.0
+train:
+  # Effective batch 64; larger CUDA batch improves occupancy on the RTX 5070.
+  micro_batch_size: 64
+  grad_accum: 1
+  amp_dtype: bf16
+  compile: true
+  compile_mode: default
+  seed: 42
+  max_hours: 6.0
+  log_every: 20
+  save_every_steps: 400
+  keep_last: 4
+  checkpoint_dir: checkpoints
+  resume: auto
+  num_workers: 0
+  # Preserve the dominant KEEP class; confidence gating is applied at inference.
+  keep_downweight: 1.0
