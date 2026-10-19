@@ -81,6 +81,7 @@ class TrainLoopConfig:
     checkpoint_dir: str = "checkpoints"
     resume: str = "auto"
     num_workers: int = 4
+    keep_downweight: float = 1.0
 
 
 @dataclass
