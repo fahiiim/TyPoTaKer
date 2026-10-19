@@ -91,7 +91,15 @@ def build_gec_from_clean(
             src_ids = tok.encode(noisy)
             tgt_ids = tok.encode(text)
             src_toks = tok.token_strings(noisy)
-            labels = align_edits(src_ids, tgt_ids, replace_map, append_map)
+            tgt_toks = tok.token_strings(text)
+            labels = align_edits(
+                src_ids,
+                tgt_ids,
+                replace_map,
+                append_map,
+                src_pieces=src_toks,
+                tgt_pieces=tgt_toks,
+            )
             chars = tok.char_ids_for_tokens(src_toks)
             n = min(len(src_ids), len(labels), len(chars))
             yield {
