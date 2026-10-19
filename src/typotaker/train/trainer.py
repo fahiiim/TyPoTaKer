@@ -205,6 +205,7 @@ def train(cfg: TrainConfig) -> Path:
                     batch["char_ids"],
                     batch["edit_labels"],
                     pad_id,
+                    keep_downweight=cfg.train.keep_downweight,
                 )
             loss = loss / cfg.train.grad_accum
 
