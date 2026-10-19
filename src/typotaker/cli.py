@@ -103,7 +103,16 @@ def cmd_correct(args: argparse.Namespace) -> None:
     from typotaker.infer import correct_sentence, load_run
 
     model, tok = load_run(args.run, args.tokenizer)
-    print(correct_sentence(model, tok, args.text, args.maps))
+    print(
+        correct_sentence(
+            model,
+            tok,
+            args.text,
+            args.maps,
+            min_edit_prob=args.min_edit_prob,
+            edit_margin=args.edit_margin,
+        )
+    )
 
 
 def cmd_count(args: argparse.Namespace) -> None:
@@ -172,6 +181,8 @@ def main() -> None:
     s.add_argument("--run", required=True)
     s.add_argument("--tokenizer", default="data/tokenizer/tokenizer.json")
     s.add_argument("--maps", default="data/processed/gec/edit_maps.json")
+    s.add_argument("--min-edit-prob", type=float, default=0.0)
+    s.add_argument("--edit-margin", type=float, default=0.0)
     s.add_argument("--text", required=True)
     s.set_defaults(func=cmd_correct)
 
