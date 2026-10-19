@@ -34,6 +34,8 @@ def align_edits(
     tgt_ids: list[int],
     replace_map: dict[int, int],
     append_map: dict[int, int],
+    src_pieces: list[str] | None = None,
+    tgt_pieces: list[str] | None = None,
 ) -> list[int]:
     """One label per source token."""
     sm = SequenceMatcher(a=src_ids, b=tgt_ids, autojunk=False)
@@ -48,6 +50,12 @@ def align_edits(
             src_span = src_ids[i1:i2]
             tgt_span = tgt_ids[j1:j2]
             for k, sid in enumerate(src_span):
+                if k < len(tgt_span) and src_pieces and tgt_pieces:
+                    s_piece = src_pieces[i1 + k].lstrip()
+                    t_piece = tgt_pieces[j1 + k].lstrip()
+                    if s_piece.lower() == t_piece.lower() and s_piece != t_piece:
+                        labels[i1 + k] = CASE_CAP if t_piece[:1].isupper() else CASE_LOWER
+                        continue
                 if k < len(tgt_span) and tgt_span[k] in replace_map:
                     labels[i1 + k] = replace_map[tgt_span[k]]
                 else:
