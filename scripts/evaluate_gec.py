@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import time
 from dataclasses import dataclass
 from difflib import SequenceMatcher
+from pathlib import Path
 
 import torch
 
@@ -17,6 +19,7 @@ class Case:
     source: str
     target: str
     clean: bool = False
+    category: str = "smoke"
 
 
 # This is a small, fixed smoke-quality gate, not a substitute for a held-out
@@ -43,6 +46,32 @@ CASES = [
 
 def norm(text: str) -> str:
     return " ".join(text.split()).strip()
+
+
+def load_cases(path: str | None) -> list[Case]:
+    if path is None:
+        return CASES
+    cases: list[Case] = []
+    with Path(path).open("r", encoding="utf-8") as f:
+        for line_number, line in enumerate(f, start=1):
+            if not line.strip():
+                continue
+            obj = json.loads(line)
+            try:
+                cases.append(
+                    Case(
+                        name=str(obj["name"]),
+                        source=str(obj["source"]),
+                        target=str(obj["target"]),
+                        clean=bool(obj.get("clean", False)),
+                        category=str(obj.get("category", "uncategorized")),
+                    )
+                )
+            except KeyError as exc:
+                raise ValueError(f"missing {exc} at {path}:{line_number}") from exc
+    if not cases:
+        raise ValueError(f"no cases found in {path}")
+    return cases
 
 
 def words(text: str) -> list[str]:
@@ -79,58 +108,77 @@ def evaluate_run(
     device: str | None,
     min_edit_prob: float,
     edit_margin: float,
+    cases: list[Case],
+    show_limit: int,
 ) -> dict:
     model, tok = load_run(run, tokenizer, device=device)
     if torch.cuda.is_available() and next(model.parameters()).is_cuda:
         torch.cuda.reset_peak_memory_stats()
 
     # One warm-up avoids counting the first CUDA/kernel initialization as normal latency.
-    correct_sentence(model, tok, CASES[0].source, maps, min_edit_prob, edit_margin)
+    correct_sentence(model, tok, cases[0].source, maps, min_edit_prob, edit_margin)
     rows = []
-    for case in CASES:
+    for case in cases:
         t0 = time.perf_counter()
         output = correct_sentence(model, tok, case.source, maps, min_edit_prob, edit_margin)
         latency_ms = (time.perf_counter() - t0) * 1000
         rows.append((case, output, latency_ms))
 
-    typo_rows = [(c, o) for c, o, _ in rows if not c.clean]
+    error_rows = [(c, o) for c, o, _ in rows if not c.clean]
+    typo_rows = [(c, o) for c, o in error_rows if c.category == "typo"]
     clean_rows = [(c, o) for c, o, _ in rows if c.clean]
     per_case_ops = [
         (edit_ops(case.source, case.target), edit_ops(case.source, output))
-        for case, output in typo_rows
+        for case, output in error_rows
     ]
     precision, recall, f05 = prf05(per_case_ops)
 
     exact = sum(norm(o) == norm(c.target) for c, o, _ in rows)
+    error_exact = sum(norm(o) == norm(c.target) for c, o in error_rows)
     typo_exact = sum(norm(o) == norm(c.target) for c, o in typo_rows)
     clean_unchanged = sum(norm(o) == norm(c.source) for c, o in clean_rows)
     clean_false_edits = sum(norm(o) != norm(c.source) for c, o in clean_rows)
-    changed_typo = sum(norm(o) != norm(c.source) for c, o in typo_rows)
+    changed_error = sum(norm(o) != norm(c.source) for c, o in error_rows)
     mean_latency = sum(lat for _, _, lat in rows) / len(rows)
     peak_mb = 0.0
     if torch.cuda.is_available() and next(model.parameters()).is_cuda:
         peak_mb = torch.cuda.max_memory_allocated() / (1024 * 1024)
 
     print(f"\nMODEL {run}")
-    for case, output, latency in rows:
-        print(f"[{case.name}] clean={case.clean} latency_ms={latency:.2f}")
+    shown_rows = rows if show_limit <= 0 else rows[:show_limit]
+    for case, output, latency in shown_rows:
+        print(f"[{case.name}] category={case.category} clean={case.clean} latency_ms={latency:.2f}")
         print(f"  source:  {case.source}")
         print(f"  target:  {case.target}")
         print(f"  output:  {output}")
+    if len(shown_rows) < len(rows):
+        print(f"  ... {len(rows) - len(shown_rows)} additional cases omitted; use --show-limit 0 to print all")
     print("SUMMARY")
     print(f"  exact_match_all={exact}/{len(rows)} ({exact / len(rows):.3f})")
-    print(f"  typo_recovery={typo_exact}/{len(typo_rows)} ({typo_exact / len(typo_rows):.3f})")
+    print(f"  error_recovery={error_exact}/{len(error_rows)} ({error_exact / len(error_rows):.3f})")
+    if typo_rows:
+        print(f"  typo_recovery={typo_exact}/{len(typo_rows)} ({typo_exact / len(typo_rows):.3f})")
     print(f"  clean_unchanged={clean_unchanged}/{len(clean_rows)} ({clean_unchanged / len(clean_rows):.3f})")
     print(f"  clean_false_edits={clean_false_edits}/{len(clean_rows)} ({clean_false_edits / len(clean_rows):.3f})")
-    print(f"  typo_changed={changed_typo}/{len(typo_rows)} ({changed_typo / len(typo_rows):.3f})")
+    print(f"  error_changed={changed_error}/{len(error_rows)} ({changed_error / len(error_rows):.3f})")
     print(f"  edit_precision={precision:.3f}")
     print(f"  edit_recall={recall:.3f}")
     print(f"  edit_f0.5={f05:.3f}")
     print(f"  mean_latency_ms={mean_latency:.2f}")
     print(f"  peak_cuda_memory_mb={peak_mb:.1f}")
+    category_rows: dict[str, list[tuple[Case, str]]] = {}
+    for case, output, _ in rows:
+        category_rows.setdefault(case.category, []).append((case, output))
+    print("CATEGORY_SUMMARY")
+    for category, category_values in sorted(category_rows.items()):
+        total = len(category_values)
+        exact_category = sum(norm(output) == norm(case.target) for case, output in category_values)
+        print(f"  {category}: exact={exact_category}/{total} ({exact_category / total:.3f})")
+
     return {
         "exact": exact / len(rows),
-        "typo_recovery": typo_exact / len(typo_rows),
+        "error_recovery": error_exact / len(error_rows),
+        "typo_recovery": typo_exact / len(typo_rows) if typo_rows else 0.0,
         "clean_unchanged": clean_unchanged / len(clean_rows),
         "clean_false_edits": clean_false_edits / len(clean_rows),
         "precision": precision,
@@ -150,8 +198,12 @@ def main() -> None:
     parser.add_argument("--device", choices=["auto", "cpu", "cuda"], default="auto")
     parser.add_argument("--min-edit-prob", type=float, default=0.0)
     parser.add_argument("--edit-margin", type=float, default=0.0)
+    parser.add_argument("--cases", help="JSONL held-out cases; defaults to the 16-case smoke suite")
+    parser.add_argument("--show-limit", type=int, default=24, help="rows shown per model; 0 shows all")
     args = parser.parse_args()
     device = None if args.device == "auto" else args.device
+    cases = load_cases(args.cases)
+    print(f"EVALUATION_CASES count={len(cases)} source={args.cases or 'built-in-smoke'}")
 
     results = {
         "stage0": evaluate_run(
@@ -161,6 +213,8 @@ def main() -> None:
             device,
             args.min_edit_prob,
             args.edit_margin,
+            cases,
+            args.show_limit,
         ),
         "stage1": evaluate_run(
             args.stage1,
@@ -169,12 +223,15 @@ def main() -> None:
             device,
             args.min_edit_prob,
             args.edit_margin,
+            cases,
+            args.show_limit,
         ),
     }
     print("\nCOMPARISON")
     for name, values in results.items():
         print(
-            f"{name}: typo_recovery={values['typo_recovery']:.3f} "
+            f"{name}: error_recovery={values['error_recovery']:.3f} "
+            f"typo_recovery={values['typo_recovery']:.3f} "
             f"clean_unchanged={values['clean_unchanged']:.3f} "
             f"precision={values['precision']:.3f} "
             f"recall={values['recall']:.3f} "
