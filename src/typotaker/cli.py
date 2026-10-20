@@ -42,6 +42,10 @@ def cmd_inject_gec(args: argparse.Namespace) -> None:
         k_replace=args.k_replace,
         k_append=args.k_append,
         seed=args.seed,
+        corruption_prob=args.corruption_prob,
+        min_ops=args.min_ops,
+        max_ops=args.max_ops,
+        max_unit_chars=args.max_unit_chars,
     )
 
 
@@ -147,6 +151,10 @@ def main() -> None:
     s.add_argument("--k-replace", type=int, default=2048)
     s.add_argument("--k-append", type=int, default=2048)
     s.add_argument("--seed", type=int, default=42)
+    s.add_argument("--corruption-prob", type=float, default=0.85)
+    s.add_argument("--min-ops", type=int, default=1)
+    s.add_argument("--max-ops", type=int, default=2)
+    s.add_argument("--max-unit-chars", type=int, default=384)
     s.set_defaults(func=cmd_inject_gec)
 
     s = sub.add_parser("train")
