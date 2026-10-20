@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import random
+import re
 from pathlib import Path
 
 from typotaker.data.edits import align_edits, build_freq_maps
@@ -21,6 +22,41 @@ SMOKE_SENTENCES = [
     "Grammar correction should prefer precision over recall.",
     "Next word prediction helps while you type on the desktop.",
 ] * 80
+
+
+def split_gec_units(text: str, max_chars: int = 384) -> list[str]:
+    """Split long documents into sentence-based units visible to the GEC model."""
+    if max_chars < 64:
+        raise ValueError("max_chars must be at least 64")
+    sentences = [part.strip() for part in re.split(r"(?<=[.!?])\s+", text.strip()) if part.strip()]
+    units: list[str] = []
+    current = ""
+    for sentence in sentences:
+        if len(sentence) > max_chars:
+            if current:
+                units.append(current)
+                current = ""
+            words = sentence.split()
+            piece = ""
+            for word in words:
+                candidate = f"{piece} {word}".strip()
+                if piece and len(candidate) > max_chars:
+                    units.append(piece)
+                    piece = word
+                else:
+                    piece = candidate
+            if piece:
+                current = piece
+            continue
+        candidate = f"{current} {sentence}".strip()
+        if current and len(candidate) > max_chars:
+            units.append(current)
+            current = sentence
+        else:
+            current = candidate
+    if current:
+        units.append(current)
+    return units or ([text.strip()] if text.strip() else [])
 
 
 def write_smoke_corpus(root: Path) -> Path:
@@ -53,6 +89,10 @@ def build_gec_from_clean(
     k_append: int = 2048,
     seed: int = 42,
     max_chars: int = 16,
+    corruption_prob: float = 0.85,
+    min_ops: int = 1,
+    max_ops: int = 2,
+    max_unit_chars: int = 384,
 ) -> None:
     tok = TypoTokenizer(tokenizer_path, max_chars=max_chars)
     rng = random.Random(seed)
@@ -87,29 +127,40 @@ def build_gec_from_clean(
 
     def rows():
         for text in clean_rows:
-            noisy = corrupt_sentence(text, rng)
-            src_ids = tok.encode(noisy)
-            tgt_ids = tok.encode(text)
-            src_toks = tok.token_strings(noisy)
-            tgt_toks = tok.token_strings(text)
-            labels = align_edits(
-                src_ids,
-                tgt_ids,
-                replace_map,
-                append_map,
-                src_pieces=src_toks,
-                tgt_pieces=tgt_toks,
-            )
-            chars = tok.char_ids_for_tokens(src_toks)
-            n = min(len(src_ids), len(labels), len(chars))
-            yield {
-                "src": noisy,
-                "clean": text,
-                "src_ids": src_ids[:n],
-                "src_chars": chars[:n],
-                "edit_labels": labels[:n],
-            }
+            for clean_unit in split_gec_units(text, max_unit_chars):
+                noisy = corrupt_sentence(
+                    clean_unit,
+                    rng,
+                    p=corruption_prob,
+                    min_ops=min_ops,
+                    max_ops=max_ops,
+                )
+                src_ids = tok.encode(noisy)
+                tgt_ids = tok.encode(clean_unit)
+                src_toks = tok.token_strings(noisy)
+                tgt_toks = tok.token_strings(clean_unit)
+                labels = align_edits(
+                    src_ids,
+                    tgt_ids,
+                    replace_map,
+                    append_map,
+                    src_pieces=src_toks,
+                    tgt_pieces=tgt_toks,
+                )
+                chars = tok.char_ids_for_tokens(src_toks)
+                n = min(len(src_ids), len(labels), len(chars))
+                yield {
+                    "src": noisy,
+                    "clean": clean_unit,
+                    "src_ids": src_ids[:n],
+                    "src_chars": chars[:n],
+                    "edit_labels": labels[:n],
+                }
 
     n = write_jsonl(out_jsonl, rows())
-    print(f"wrote {n} GEC pairs -> {out_jsonl}")
+    print(f"wrote {n} GEC units -> {out_jsonl}")
+    print(
+        f"corruption_prob={corruption_prob} min_ops={min_ops} "
+        f"max_ops={max_ops} max_unit_chars={max_unit_chars}"
+    )
     print(f"edit maps -> {maps_path}")
