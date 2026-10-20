@@ -35,6 +35,49 @@ KB_NEIGHBORS = {
     "n": "bhjm",
 }
 
+# Correct -> intentionally corrupted. These cover frequent keyboard/spelling
+# mistakes that are useful for a desktop typing assistant.
+COMMON_TYPOS = [
+    ("the", "teh"),
+    ("receive", "recieve"),
+    ("separate", "seperate"),
+    ("address", "adress"),
+    ("definitely", "definately"),
+    ("occurred", "occured"),
+    ("environment", "enviroment"),
+    ("weird", "wierd"),
+    ("because", "becuase"),
+    ("tomorrow", "tomorow"),
+    ("their", "thier"),
+    ("until", "untill"),
+    ("coming", "comming"),
+    ("successful", "succesful"),
+    ("necessary", "neccessary"),
+    ("calendar", "calender"),
+    ("available", "avaliable"),
+    ("immediately", "imediately"),
+    ("decision", "descision"),
+    ("knowledge", "knowlege"),
+]
+
+# Clean token sequences -> common grammar errors. We only apply transformations
+# when the full local pattern matches, avoiding the old arbitrary "add s" rule.
+GRAMMAR_PATTERNS = [
+    (("i", "have"), ("i", "has")),
+    (("she", "has"), ("she", "have")),
+    (("he", "has"), ("he", "have")),
+    (("they", "are"), ("they", "is")),
+    (("we", "are"), ("we", "is")),
+    (("we", "were"), ("we", "was")),
+    (("they", "were"), ("they", "was")),
+    (("she", "goes"), ("she", "go")),
+    (("he", "goes"), ("he", "go")),
+    (("it", "works"), ("it", "work")),
+    (("the", "server", "listens"), ("the", "server", "listen")),
+    (("everyone", "is"), ("everyone", "are")),
+    (("one", "of", "the"), ("one", "of", "a")),
+]
+
 
 def _typo_word(word: str, rng: random.Random) -> str:
     if len(word) < 3 or not word.isalpha():
@@ -55,6 +98,14 @@ def _typo_word(word: str, rng: random.Random) -> str:
         if word[i].isupper():
             chars[i] = chars[i].upper()
     return "".join(chars)
+
+
+def _match_case(source: str, replacement: str) -> str:
+    if source.isupper():
+        return replacement.upper()
+    if source[:1].isupper():
+        return replacement.capitalize()
+    return replacement
 
 
 def _split_tokens(text: str) -> tuple[list[str], list[str]]:
@@ -87,46 +138,120 @@ def _render_tokens(tokens: list[str], gaps: list[str]) -> str:
     return "".join(gap + token for gap, token in zip(gaps, tokens)) + gaps[-1]
 
 
-def corrupt_sentence(text: str, rng: random.Random | None = None, p: float = 0.7) -> str:
-    """Return a noisy version. ~30% of sentences stay clean (identity KEEP training)."""
+def _apply_common_typo(words: list[str], rng: random.Random) -> bool:
+    options: list[tuple[int, str]] = []
+    for correct, corrupted in COMMON_TYPOS:
+        options.extend((i, corrupted) for i, word in enumerate(words) if word.lower() == correct)
+    if not options:
+        return False
+    index, corrupted = rng.choice(options)
+    words[index] = _match_case(words[index], corrupted)
+    return True
+
+
+def _apply_grammar_pattern(words: list[str], rng: random.Random) -> bool:
+    options: list[tuple[int, tuple[str, ...], tuple[str, ...]]] = []
+    lowered = [word.lower() for word in words]
+    for clean, noisy in GRAMMAR_PATTERNS:
+        width = len(clean)
+        for index in range(len(words) - width + 1):
+            if tuple(lowered[index : index + width]) == clean:
+                options.append((index, clean, noisy))
+    if not options:
+        return False
+    index, clean, noisy = rng.choice(options)
+    for offset, replacement in enumerate(noisy):
+        words[index + offset] = _match_case(words[index + offset], replacement)
+    return True
+
+
+def _remove_apostrophe(words: list[str], gaps: list[str], rng: random.Random) -> bool:
+    candidates = [i for i, word in enumerate(words) if word == "'"]
+    if not candidates:
+        return False
+    _delete_token(words, gaps, rng.choice(candidates))
+    return True
+
+
+def corrupt_sentence(
+    text: str,
+    rng: random.Random | None = None,
+    p: float = 0.7,
+    min_ops: int = 1,
+    max_ops: int = 3,
+) -> str:
+    """Return realistic synthetic noise while retaining all original separators.
+
+    ``p`` is the probability of corrupting a unit. ``min_ops`` and ``max_ops``
+    let training recipes control the density of meaningful edit supervision.
+    """
     rng = rng or random.Random()
+    if min_ops < 1 or max_ops < min_ops:
+        raise ValueError("expected 1 <= min_ops <= max_ops")
     if rng.random() > p:
         return text
     words, gaps = _split_tokens(text)
     if not words:
         return text
-    n_ops = rng.randint(1, 3)
-    for _ in range(n_ops):
+    n_ops = rng.randint(min_ops, max_ops)
+    applied = 0
+    attempts = n_ops * 4
+    for _ in range(attempts):
+        if applied >= n_ops:
+            break
         op = rng.choice(
-            ["typo", "confusion", "drop_article", "prep", "case", "sv_s"]
+            [
+                "common_typo",
+                "common_typo",
+                "typo",
+                "confusion",
+                "drop_article",
+                "prep",
+                "case",
+                "grammar",
+                "apostrophe",
+            ]
         )
+        changed = False
         if op == "typo":
             candidates = [i for i, word in enumerate(words) if word.isalpha() and len(word) >= 3]
             if not candidates:
                 continue
             idx = rng.choice(candidates)
-            words[idx] = _typo_word(words[idx], rng)
+            replacement = _typo_word(words[idx], rng)
+            changed = replacement != words[idx]
+            words[idx] = replacement
+        elif op == "common_typo":
+            changed = _apply_common_typo(words, rng)
         elif op == "confusion":
             src, dst = rng.choice(CONFUSIONS)
             candidates = [i for i, word in enumerate(words) if word.lower() == src.lower()]
             if candidates:
-                words[rng.choice(candidates)] = dst
+                index = rng.choice(candidates)
+                words[index] = _match_case(words[index], dst)
+                changed = True
         elif op == "drop_article":
             arts = [i for i, w in enumerate(words) if w.lower() in ARTICLES]
             if arts:
                 _delete_token(words, gaps, rng.choice(arts))
+                changed = True
         elif op == "prep":
             idxs = [i for i, w in enumerate(words) if w.lower() in PREP]
             if idxs:
-                words[rng.choice(idxs)] = rng.choice(PREP)
+                index = rng.choice(idxs)
+                choices = [prep for prep in PREP if prep != words[index].lower()]
+                words[index] = _match_case(words[index], rng.choice(choices))
+                changed = True
         elif op == "case":
-            idx = rng.randrange(len(words))
-            if words[idx].isalpha():
-                words[idx] = words[idx].lower() if rng.random() < 0.5 else words[idx].upper()
-        elif op == "sv_s":
-            # crude 3sg: drop or add trailing s on a verb-like token
-            cands = [i for i, w in enumerate(words) if w.isalpha() and 3 <= len(w) <= 10]
-            if cands:
-                i = rng.choice(cands)
-                words[i] = words[i][:-1] if words[i].endswith("s") else words[i] + "s"
+            candidates = [i for i, word in enumerate(words) if word.isalpha() and word != word.lower()]
+            if candidates:
+                index = rng.choice(candidates)
+                words[index] = words[index].lower()
+                changed = True
+        elif op == "grammar":
+            changed = _apply_grammar_pattern(words, rng)
+        elif op == "apostrophe":
+            changed = _remove_apostrophe(words, gaps, rng)
+        if changed:
+            applied += 1
     return _render_tokens(words, gaps)
