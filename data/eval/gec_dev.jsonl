@@ -1,0 +1,200 @@
+{"name": "typo-the", "source": "This is teh final document.", "target": "This is the final document.", "category": "typo", "clean": false}
+{"name": "clean-typo-the", "source": "This is the final document.", "target": "This is the final document.", "category": "clean", "clean": true}
+{"name": "typo-receive", "source": "Please recieve the package today.", "target": "Please receive the package today.", "category": "typo", "clean": false}
+{"name": "clean-typo-receive", "source": "Please receive the package today.", "target": "Please receive the package today.", "category": "clean", "clean": true}
+{"name": "typo-separate", "source": "Keep the files in seperate folders.", "target": "Keep the files in separate folders.", "category": "typo", "clean": false}
+{"name": "clean-typo-separate", "source": "Keep the files in separate folders.", "target": "Keep the files in separate folders.", "category": "clean", "clean": true}
+{"name": "typo-address", "source": "Confirm the delivery adress first.", "target": "Confirm the delivery address first.", "category": "typo", "clean": false}
+{"name": "clean-typo-address", "source": "Confirm the delivery address first.", "target": "Confirm the delivery address first.", "category": "clean", "clean": true}
+{"name": "typo-definitely", "source": "I will definately attend the meeting.", "target": "I will definitely attend the meeting.", "category": "typo", "clean": false}
+{"name": "clean-typo-definitely", "source": "I will definitely attend the meeting.", "target": "I will definitely attend the meeting.", "category": "clean", "clean": true}
+{"name": "typo-occurred", "source": "The error occured after the update.", "target": "The error occurred after the update.", "category": "typo", "clean": false}
+{"name": "clean-typo-occurred", "source": "The error occurred after the update.", "target": "The error occurred after the update.", "category": "clean", "clean": true}
+{"name": "typo-environment", "source": "Use a clean enviroment for testing.", "target": "Use a clean environment for testing.", "category": "typo", "clean": false}
+{"name": "clean-typo-environment", "source": "Use a clean environment for testing.", "target": "Use a clean environment for testing.", "category": "clean", "clean": true}
+{"name": "typo-weird", "source": "That is a wierd result.", "target": "That is a weird result.", "category": "typo", "clean": false}
+{"name": "clean-typo-weird", "source": "That is a weird result.", "target": "That is a weird result.", "category": "clean", "clean": true}
+{"name": "typo-because", "source": "The task failed becuase the port was closed.", "target": "The task failed because the port was closed.", "category": "typo", "clean": false}
+{"name": "clean-typo-because", "source": "The task failed because the port was closed.", "target": "The task failed because the port was closed.", "category": "clean", "clean": true}
+{"name": "typo-tomorrow", "source": "I will send the report tomorow.", "target": "I will send the report tomorrow.", "category": "typo", "clean": false}
+{"name": "clean-typo-tomorrow", "source": "I will send the report tomorrow.", "target": "I will send the report tomorrow.", "category": "clean", "clean": true}
+{"name": "typo-their", "source": "Thier configuration is incomplete.", "target": "Their configuration is incomplete.", "category": "typo", "clean": false}
+{"name": "clean-typo-their", "source": "Their configuration is incomplete.", "target": "Their configuration is incomplete.", "category": "clean", "clean": true}
+{"name": "typo-until", "source": "Wait untill the process finishes.", "target": "Wait until the process finishes.", "category": "typo", "clean": false}
+{"name": "clean-typo-until", "source": "Wait until the process finishes.", "target": "Wait until the process finishes.", "category": "clean", "clean": true}
+{"name": "typo-coming", "source": "The release is comming soon.", "target": "The release is coming soon.", "category": "typo", "clean": false}
+{"name": "clean-typo-coming", "source": "The release is coming soon.", "target": "The release is coming soon.", "category": "clean", "clean": true}
+{"name": "typo-government", "source": "The goverment published the report.", "target": "The government published the report.", "category": "typo", "clean": false}
+{"name": "clean-typo-government", "source": "The government published the report.", "target": "The government published the report.", "category": "clean", "clean": true}
+{"name": "typo-argument", "source": "They started an arguement yesterday.", "target": "They started an argument yesterday.", "category": "typo", "clean": false}
+{"name": "clean-typo-argument", "source": "They started an argument yesterday.", "target": "They started an argument yesterday.", "category": "clean", "clean": true}
+{"name": "typo-successful", "source": "The migration was succesful.", "target": "The migration was successful.", "category": "typo", "clean": false}
+{"name": "clean-typo-successful", "source": "The migration was successful.", "target": "The migration was successful.", "category": "clean", "clean": true}
+{"name": "typo-beginning", "source": "Read the begining of the guide.", "target": "Read the beginning of the guide.", "category": "typo", "clean": false}
+{"name": "clean-typo-beginning", "source": "Read the beginning of the guide.", "target": "Read the beginning of the guide.", "category": "clean", "clean": true}
+{"name": "typo-necessary", "source": "A backup is neccessary here.", "target": "A backup is necessary here.", "category": "typo", "clean": false}
+{"name": "clean-typo-necessary", "source": "A backup is necessary here.", "target": "A backup is necessary here.", "category": "clean", "clean": true}
+{"name": "typo-calendar", "source": "Add the event to your calender.", "target": "Add the event to your calendar.", "category": "typo", "clean": false}
+{"name": "clean-typo-calendar", "source": "Add the event to your calendar.", "target": "Add the event to your calendar.", "category": "clean", "clean": true}
+{"name": "typo-embarrass", "source": "Do not embarass the new user.", "target": "Do not embarrass the new user.", "category": "typo", "clean": false}
+{"name": "clean-typo-embarrass", "source": "Do not embarrass the new user.", "target": "Do not embarrass the new user.", "category": "clean", "clean": true}
+{"name": "typo-referred", "source": "She refered me to the manual.", "target": "She referred me to the manual.", "category": "typo", "clean": false}
+{"name": "clean-typo-referred", "source": "She referred me to the manual.", "target": "She referred me to the manual.", "category": "clean", "clean": true}
+{"name": "typo-accommodate", "source": "The room can accomodate ten people.", "target": "The room can accommodate ten people.", "category": "typo", "clean": false}
+{"name": "clean-typo-accommodate", "source": "The room can accommodate ten people.", "target": "The room can accommodate ten people.", "category": "clean", "clean": true}
+{"name": "typo-publicly", "source": "The company announced it publically.", "target": "The company announced it publicly.", "category": "typo", "clean": false}
+{"name": "clean-typo-publicly", "source": "The company announced it publicly.", "target": "The company announced it publicly.", "category": "clean", "clean": true}
+{"name": "typo-maintenance", "source": "Schedule regular maintainance checks.", "target": "Schedule regular maintenance checks.", "category": "typo", "clean": false}
+{"name": "clean-typo-maintenance", "source": "Schedule regular maintenance checks.", "target": "Schedule regular maintenance checks.", "category": "clean", "clean": true}
+{"name": "typo-available", "source": "The new version is avaliable now.", "target": "The new version is available now.", "category": "typo", "clean": false}
+{"name": "clean-typo-available", "source": "The new version is available now.", "target": "The new version is available now.", "category": "clean", "clean": true}
+{"name": "typo-immediately", "source": "Restart the service imediately.", "target": "Restart the service immediately.", "category": "typo", "clean": false}
+{"name": "clean-typo-immediately", "source": "Restart the service immediately.", "target": "Restart the service immediately.", "category": "clean", "clean": true}
+{"name": "typo-decision", "source": "That was a difficult descision.", "target": "That was a difficult decision.", "category": "typo", "clean": false}
+{"name": "clean-typo-decision", "source": "That was a difficult decision.", "target": "That was a difficult decision.", "category": "clean", "clean": true}
+{"name": "typo-knowledge", "source": "Share your knowlege with the team.", "target": "Share your knowledge with the team.", "category": "typo", "clean": false}
+{"name": "clean-typo-knowledge", "source": "Share your knowledge with the team.", "target": "Share your knowledge with the team.", "category": "clean", "clean": true}
+{"name": "typo-independent", "source": "The test must be independant.", "target": "The test must be independent.", "category": "typo", "clean": false}
+{"name": "clean-typo-independent", "source": "The test must be independent.", "target": "The test must be independent.", "category": "clean", "clean": true}
+{"name": "typo-privilege", "source": "This action needs admin privilage.", "target": "This action needs admin privilege.", "category": "typo", "clean": false}
+{"name": "clean-typo-privilege", "source": "This action needs admin privilege.", "target": "This action needs admin privilege.", "category": "clean", "clean": true}
+{"name": "grammar-have", "source": "I has a question.", "target": "I have a question.", "category": "grammar", "clean": false}
+{"name": "clean-grammar-have", "source": "I have a question.", "target": "I have a question.", "category": "clean", "clean": true}
+{"name": "grammar-goes", "source": "She go to work by train.", "target": "She goes to work by train.", "category": "grammar", "clean": false}
+{"name": "clean-grammar-goes", "source": "She goes to work by train.", "target": "She goes to work by train.", "category": "clean", "clean": true}
+{"name": "grammar-are", "source": "They is ready to leave.", "target": "They are ready to leave.", "category": "grammar", "clean": false}
+{"name": "clean-grammar-are", "source": "They are ready to leave.", "target": "They are ready to leave.", "category": "clean", "clean": true}
+{"name": "grammar-were", "source": "We was late for class.", "target": "We were late for class.", "category": "grammar", "clean": false}
+{"name": "clean-grammar-were", "source": "We were late for class.", "target": "We were late for class.", "category": "clean", "clean": true}
+{"name": "grammar-does", "source": "He do not know the answer.", "target": "He does not know the answer.", "category": "grammar", "clean": false}
+{"name": "clean-grammar-does", "source": "He does not know the answer.", "target": "He does not know the answer.", "category": "clean", "clean": true}
+{"name": "grammar-has", "source": "The server have two ports.", "target": "The server has two ports.", "category": "grammar", "clean": false}
+{"name": "clean-grammar-has", "source": "The server has two ports.", "target": "The server has two ports.", "category": "clean", "clean": true}
+{"name": "grammar-was", "source": "The results was unexpected yesterday.", "target": "The results were unexpected yesterday.", "category": "grammar", "clean": false}
+{"name": "clean-grammar-was", "source": "The results were unexpected yesterday.", "target": "The results were unexpected yesterday.", "category": "clean", "clean": true}
+{"name": "grammar-agree", "source": "I am agree with this plan.", "target": "I agree with this plan.", "category": "grammar", "clean": false}
+{"name": "clean-grammar-agree", "source": "I agree with this plan.", "target": "I agree with this plan.", "category": "clean", "clean": true}
+{"name": "grammar-an", "source": "She bought a umbrella.", "target": "She bought an umbrella.", "category": "grammar", "clean": false}
+{"name": "clean-grammar-an", "source": "She bought an umbrella.", "target": "She bought an umbrella.", "category": "clean", "clean": true}
+{"name": "grammar-a", "source": "He is an university student.", "target": "He is a university student.", "category": "grammar", "clean": false}
+{"name": "clean-grammar-a", "source": "He is a university student.", "target": "He is a university student.", "category": "clean", "clean": true}
+{"name": "grammar-listens", "source": "The server listen on port 8000.", "target": "The server listens on port 8000.", "category": "grammar", "clean": false}
+{"name": "clean-grammar-listens", "source": "The server listens on port 8000.", "target": "The server listens on port 8000.", "category": "clean", "clean": true}
+{"name": "grammar-needs", "source": "This file need a new name.", "target": "This file needs a new name.", "category": "grammar", "clean": false}
+{"name": "clean-grammar-needs", "source": "This file needs a new name.", "target": "This file needs a new name.", "category": "clean", "clean": true}
+{"name": "grammar-works", "source": "My laptop work without problems.", "target": "My laptop works without problems.", "category": "grammar", "clean": false}
+{"name": "clean-grammar-works", "source": "My laptop works without problems.", "target": "My laptop works without problems.", "category": "clean", "clean": true}
+{"name": "grammar-do", "source": "The students does their homework.", "target": "The students do their homework.", "category": "grammar", "clean": false}
+{"name": "clean-grammar-do", "source": "The students do their homework.", "target": "The students do their homework.", "category": "clean", "clean": true}
+{"name": "grammar-people", "source": "There is many people outside.", "target": "There are many people outside.", "category": "grammar", "clean": false}
+{"name": "clean-grammar-people", "source": "There are many people outside.", "target": "There are many people outside.", "category": "clean", "clean": true}
+{"name": "grammar-child", "source": "Each child have a notebook.", "target": "Each child has a notebook.", "category": "grammar", "clean": false}
+{"name": "clean-grammar-child", "source": "Each child has a notebook.", "target": "Each child has a notebook.", "category": "clean", "clean": true}
+{"name": "grammar-try", "source": "She try to call every day.", "target": "She tries to call every day.", "category": "grammar", "clean": false}
+{"name": "clean-grammar-try", "source": "She tries to call every day.", "target": "She tries to call every day.", "category": "clean", "clean": true}
+{"name": "grammar-watches", "source": "He watch the logs carefully.", "target": "He watches the logs carefully.", "category": "grammar", "clean": false}
+{"name": "clean-grammar-watches", "source": "He watches the logs carefully.", "target": "He watches the logs carefully.", "category": "clean", "clean": true}
+{"name": "grammar-better", "source": "This version is more better.", "target": "This version is better.", "category": "grammar", "clean": false}
+{"name": "clean-grammar-better", "source": "This version is better.", "target": "This version is better.", "category": "clean", "clean": true}
+{"name": "grammar-did", "source": "They did not went home.", "target": "They did not go home.", "category": "grammar", "clean": false}
+{"name": "clean-grammar-did", "source": "They did not go home.", "target": "They did not go home.", "category": "clean", "clean": true}
+{"name": "grammar-at", "source": "We met in Monday morning.", "target": "We met on Monday morning.", "category": "grammar", "clean": false}
+{"name": "clean-grammar-at", "source": "We met on Monday morning.", "target": "We met on Monday morning.", "category": "clean", "clean": true}
+{"name": "grammar-since", "source": "I have lived here since five years.", "target": "I have lived here for five years.", "category": "grammar", "clean": false}
+{"name": "clean-grammar-since", "source": "I have lived here for five years.", "target": "I have lived here for five years.", "category": "clean", "clean": true}
+{"name": "grammar-explain", "source": "Can you explain me the rule?", "target": "Can you explain the rule to me?", "category": "grammar", "clean": false}
+{"name": "clean-grammar-explain", "source": "Can you explain the rule to me?", "target": "Can you explain the rule to me?", "category": "clean", "clean": true}
+{"name": "grammar-discuss", "source": "We discussed about the issue.", "target": "We discussed the issue.", "category": "grammar", "clean": false}
+{"name": "clean-grammar-discuss", "source": "We discussed the issue.", "target": "We discussed the issue.", "category": "clean", "clean": true}
+{"name": "grammar-depend", "source": "It depends of the input.", "target": "It depends on the input.", "category": "grammar", "clean": false}
+{"name": "clean-grammar-depend", "source": "It depends on the input.", "target": "It depends on the input.", "category": "clean", "clean": true}
+{"name": "grammar-information", "source": "She gave me many informations.", "target": "She gave me much information.", "category": "grammar", "clean": false}
+{"name": "clean-grammar-information", "source": "She gave me much information.", "target": "She gave me much information.", "category": "clean", "clean": true}
+{"name": "grammar-advice", "source": "He gave me a good advices.", "target": "He gave me good advice.", "category": "grammar", "clean": false}
+{"name": "clean-grammar-advice", "source": "He gave me good advice.", "target": "He gave me good advice.", "category": "clean", "clean": true}
+{"name": "grammar-everyone", "source": "Everyone are invited tonight.", "target": "Everyone is invited tonight.", "category": "grammar", "clean": false}
+{"name": "clean-grammar-everyone", "source": "Everyone is invited tonight.", "target": "Everyone is invited tonight.", "category": "clean", "clean": true}
+{"name": "grammar-one", "source": "One of the files are missing.", "target": "One of the files is missing.", "category": "grammar", "clean": false}
+{"name": "clean-grammar-one", "source": "One of the files is missing.", "target": "One of the files is missing.", "category": "clean", "clean": true}
+{"name": "grammar-much", "source": "How many water do you need?", "target": "How much water do you need?", "category": "grammar", "clean": false}
+{"name": "clean-grammar-much", "source": "How much water do you need?", "target": "How much water do you need?", "category": "clean", "clean": true}
+{"name": "mechanics-capital-i", "source": "i need help with the installation.", "target": "I need help with the installation.", "category": "mechanics", "clean": false}
+{"name": "clean-mechanics-capital-i", "source": "I need help with the installation.", "target": "I need help with the installation.", "category": "clean", "clean": true}
+{"name": "mechanics-capital-name", "source": "fahim sent the message.", "target": "Fahim sent the message.", "category": "mechanics", "clean": false}
+{"name": "clean-mechanics-capital-name", "source": "Fahim sent the message.", "target": "Fahim sent the message.", "category": "clean", "clean": true}
+{"name": "mechanics-capital-start", "source": "the process completed successfully.", "target": "The process completed successfully.", "category": "mechanics", "clean": false}
+{"name": "clean-mechanics-capital-start", "source": "The process completed successfully.", "target": "The process completed successfully.", "category": "clean", "clean": true}
+{"name": "mechanics-dont", "source": "I dont understand this warning.", "target": "I don't understand this warning.", "category": "mechanics", "clean": false}
+{"name": "clean-mechanics-dont", "source": "I don't understand this warning.", "target": "I don't understand this warning.", "category": "clean", "clean": true}
+{"name": "mechanics-cant", "source": "We cant deploy this build.", "target": "We can't deploy this build.", "category": "mechanics", "clean": false}
+{"name": "clean-mechanics-cant", "source": "We can't deploy this build.", "target": "We can't deploy this build.", "category": "clean", "clean": true}
+{"name": "mechanics-isnt", "source": "The service isnt available yet.", "target": "The service isn't available yet.", "category": "mechanics", "clean": false}
+{"name": "clean-mechanics-isnt", "source": "The service isn't available yet.", "target": "The service isn't available yet.", "category": "clean", "clean": true}
+{"name": "mechanics-youre", "source": "Youre ready to begin.", "target": "You're ready to begin.", "category": "mechanics", "clean": false}
+{"name": "clean-mechanics-youre", "source": "You're ready to begin.", "target": "You're ready to begin.", "category": "clean", "clean": true}
+{"name": "mechanics-theyre", "source": "Theyre reviewing the changes.", "target": "They're reviewing the changes.", "category": "mechanics", "clean": false}
+{"name": "clean-mechanics-theyre", "source": "They're reviewing the changes.", "target": "They're reviewing the changes.", "category": "clean", "clean": true}
+{"name": "mechanics-wont", "source": "The script wont start.", "target": "The script won't start.", "category": "mechanics", "clean": false}
+{"name": "clean-mechanics-wont", "source": "The script won't start.", "target": "The script won't start.", "category": "clean", "clean": true}
+{"name": "mechanics-period", "source": "Please save your work", "target": "Please save your work.", "category": "mechanics", "clean": false}
+{"name": "clean-mechanics-period", "source": "Please save your work.", "target": "Please save your work.", "category": "clean", "clean": true}
+{"name": "mechanics-question", "source": "Where is the configuration file", "target": "Where is the configuration file?", "category": "mechanics", "clean": false}
+{"name": "clean-mechanics-question", "source": "Where is the configuration file?", "target": "Where is the configuration file?", "category": "clean", "clean": true}
+{"name": "mechanics-comma", "source": "After lunch we will test again.", "target": "After lunch, we will test again.", "category": "mechanics", "clean": false}
+{"name": "clean-mechanics-comma", "source": "After lunch, we will test again.", "target": "After lunch, we will test again.", "category": "clean", "clean": true}
+{"name": "mechanics-space-period", "source": "The build is complete .", "target": "The build is complete.", "category": "mechanics", "clean": false}
+{"name": "clean-mechanics-space-period", "source": "The build is complete.", "target": "The build is complete.", "category": "clean", "clean": true}
+{"name": "mechanics-space-comma", "source": "First , open the terminal.", "target": "First, open the terminal.", "category": "mechanics", "clean": false}
+{"name": "clean-mechanics-space-comma", "source": "First, open the terminal.", "target": "First, open the terminal.", "category": "clean", "clean": true}
+{"name": "mechanics-double-space", "source": "The model is  ready now.", "target": "The model is ready now.", "category": "mechanics", "clean": false}
+{"name": "clean-mechanics-double-space", "source": "The model is ready now.", "target": "The model is ready now.", "category": "clean", "clean": true}
+{"name": "mechanics-its", "source": "Its time to restart the service.", "target": "It's time to restart the service.", "category": "mechanics", "clean": false}
+{"name": "clean-mechanics-its", "source": "It's time to restart the service.", "target": "It's time to restart the service.", "category": "clean", "clean": true}
+{"name": "mechanics-im", "source": "Im checking the output.", "target": "I'm checking the output.", "category": "mechanics", "clean": false}
+{"name": "clean-mechanics-im", "source": "I'm checking the output.", "target": "I'm checking the output.", "category": "clean", "clean": true}
+{"name": "mechanics-ive", "source": "Ive already read the guide.", "target": "I've already read the guide.", "category": "mechanics", "clean": false}
+{"name": "clean-mechanics-ive", "source": "I've already read the guide.", "target": "I've already read the guide.", "category": "clean", "clean": true}
+{"name": "mechanics-weve", "source": "Weve fixed the issue.", "target": "We've fixed the issue.", "category": "mechanics", "clean": false}
+{"name": "clean-mechanics-weve", "source": "We've fixed the issue.", "target": "We've fixed the issue.", "category": "clean", "clean": true}
+{"name": "mechanics-didnt", "source": "The test didnt pass.", "target": "The test didn't pass.", "category": "mechanics", "clean": false}
+{"name": "clean-mechanics-didnt", "source": "The test didn't pass.", "target": "The test didn't pass.", "category": "clean", "clean": true}
+{"name": "clean-only-01", "source": "The database backup completed without errors.", "target": "The database backup completed without errors.", "category": "clean", "clean": true}
+{"name": "clean-only-02", "source": "Please review the pull request before merging it.", "target": "Please review the pull request before merging it.", "category": "clean", "clean": true}
+{"name": "clean-only-03", "source": "The application starts on the configured port.", "target": "The application starts on the configured port.", "category": "clean", "clean": true}
+{"name": "clean-only-04", "source": "A clear error message helps users recover quickly.", "target": "A clear error message helps users recover quickly.", "category": "clean", "clean": true}
+{"name": "clean-only-05", "source": "The model should preserve correct text exactly.", "target": "The model should preserve correct text exactly.", "category": "clean", "clean": true}
+{"name": "clean-only-06", "source": "Our test suite runs before every release.", "target": "Our test suite runs before every release.", "category": "clean", "clean": true}
+{"name": "clean-only-07", "source": "The new configuration file uses valid JSON.", "target": "The new configuration file uses valid JSON.", "category": "clean", "clean": true}
+{"name": "clean-only-08", "source": "She wrote detailed notes during the meeting.", "target": "She wrote detailed notes during the meeting.", "category": "clean", "clean": true}
+{"name": "clean-only-09", "source": "The package manager installed the dependency.", "target": "The package manager installed the dependency.", "category": "clean", "clean": true}
+{"name": "clean-only-10", "source": "You can restart the service after the update.", "target": "You can restart the service after the update.", "category": "clean", "clean": true}
+{"name": "clean-only-11", "source": "The dashboard displays the latest metrics.", "target": "The dashboard displays the latest metrics.", "category": "clean", "clean": true}
+{"name": "clean-only-12", "source": "Please keep your access token private.", "target": "Please keep your access token private.", "category": "clean", "clean": true}
+{"name": "clean-only-13", "source": "The customer received the confirmation email.", "target": "The customer received the confirmation email.", "category": "clean", "clean": true}
+{"name": "clean-only-14", "source": "We will investigate the issue tomorrow morning.", "target": "We will investigate the issue tomorrow morning.", "category": "clean", "clean": true}
+{"name": "clean-only-15", "source": "The command completed in less than one second.", "target": "The command completed in less than one second.", "category": "clean", "clean": true}
+{"name": "clean-only-16", "source": "This document explains the deployment process.", "target": "This document explains the deployment process.", "category": "clean", "clean": true}
+{"name": "clean-only-17", "source": "The release includes several security fixes.", "target": "The release includes several security fixes.", "category": "clean", "clean": true}
+{"name": "clean-only-18", "source": "Every contributor should read the style guide.", "target": "Every contributor should read the style guide.", "category": "clean", "clean": true}
+{"name": "clean-only-19", "source": "The logs contain enough context for debugging.", "target": "The logs contain enough context for debugging.", "category": "clean", "clean": true}
+{"name": "clean-only-20", "source": "I updated the dependency to the latest version.", "target": "I updated the dependency to the latest version.", "category": "clean", "clean": true}
+{"name": "clean-only-21", "source": "The network connection is stable today.", "target": "The network connection is stable today.", "category": "clean", "clean": true}
+{"name": "clean-only-22", "source": "They tested the feature on multiple devices.", "target": "They tested the feature on multiple devices.", "category": "clean", "clean": true}
+{"name": "clean-only-23", "source": "The response contains a valid status code.", "target": "The response contains a valid status code.", "category": "clean", "clean": true}
+{"name": "clean-only-24", "source": "We should measure latency before optimization.", "target": "We should measure latency before optimization.", "category": "clean", "clean": true}
+{"name": "clean-only-25", "source": "The source file uses UTF-8 encoding.", "target": "The source file uses UTF-8 encoding.", "category": "clean", "clean": true}
+{"name": "clean-only-26", "source": "Your changes are ready for code review.", "target": "Your changes are ready for code review.", "category": "clean", "clean": true}
+{"name": "clean-only-27", "source": "The editor highlights syntax errors automatically.", "target": "The editor highlights syntax errors automatically.", "category": "clean", "clean": true}
+{"name": "clean-only-28", "source": "A small batch can limit GPU utilization.", "target": "A small batch can limit GPU utilization.", "category": "clean", "clean": true}
+{"name": "clean-only-29", "source": "The tokenizer converts text into token IDs.", "target": "The tokenizer converts text into token IDs.", "category": "clean", "clean": true}
+{"name": "clean-only-30", "source": "Please close unused applications before training.", "target": "Please close unused applications before training.", "category": "clean", "clean": true}
+{"name": "clean-only-31", "source": "The checkpoint stores the model and optimizer state.", "target": "The checkpoint stores the model and optimizer state.", "category": "clean", "clean": true}
+{"name": "clean-only-32", "source": "This experiment has a reproducible random seed.", "target": "This experiment has a reproducible random seed.", "category": "clean", "clean": true}
+{"name": "clean-only-33", "source": "The evaluation set must remain separate from training.", "target": "The evaluation set must remain separate from training.", "category": "clean", "clean": true}
+{"name": "clean-only-34", "source": "The graph shows a steady decline in loss.", "target": "The graph shows a steady decline in loss.", "category": "clean", "clean": true}
+{"name": "clean-only-35", "source": "The team documented the final decision clearly.", "target": "The team documented the final decision clearly.", "category": "clean", "clean": true}
+{"name": "clean-only-36", "source": "A reliable system handles invalid input gracefully.", "target": "A reliable system handles invalid input gracefully.", "category": "clean", "clean": true}
+{"name": "clean-only-37", "source": "The model runs on the available CUDA device.", "target": "The model runs on the available CUDA device.", "category": "clean", "clean": true}
+{"name": "clean-only-38", "source": "The command line tool accepts a text argument.", "target": "The command line tool accepts a text argument.", "category": "clean", "clean": true}
+{"name": "clean-only-39", "source": "The report includes both successes and limitations.", "target": "The report includes both successes and limitations.", "category": "clean", "clean": true}
+{"name": "clean-only-40", "source": "We will compare the models using identical settings.", "target": "We will compare the models using identical settings.", "category": "clean", "clean": true}
