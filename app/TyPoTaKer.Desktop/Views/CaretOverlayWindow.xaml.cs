@@ -10,6 +10,13 @@ using Brush = System.Windows.Media.Brush;
 
 namespace TyPoTaKer.Desktop.Views;
 
+public enum SuggestionBadgeType
+{
+    Fix,
+    Next,
+    Clean
+}
+
 public partial class CaretOverlayWindow : Window
 {
     private const int GWL_EXSTYLE = -20;
@@ -25,9 +32,11 @@ public partial class CaretOverlayWindow : Window
     private readonly DispatcherTimer _autoHideTimer;
 
     public event EventHandler? DismissClicked;
+    public event EventHandler? SuggestionAccepted;
 
     public string CurrentInsertion { get; private set; } = string.Empty;
     public int CurrentBackspaces { get; private set; } = 0;
+    public bool IsSelectionReplacement { get; private set; } = false;
     public bool HasActiveSuggestion { get; private set; } = false;
 
     public CaretOverlayWindow()
@@ -54,57 +63,91 @@ public partial class CaretOverlayWindow : Window
     }
 
     public void ShowSuggestion(
-        Point caretScreenPos,
-        double caretHeight,
+        Point screenPos,
+        double heightOffset,
         string displayLabel,
         string insertionText,
-        bool isCorrection,
-        int backspaces = 0)
+        SuggestionBadgeType badgeType,
+        int backspaces = 0,
+        bool isSelectionReplacement = false,
+        bool isAbovePosition = false)
     {
         Dispatcher.Invoke(() =>
         {
             CurrentInsertion = insertionText;
             CurrentBackspaces = backspaces;
-            HasActiveSuggestion = true;
+            IsSelectionReplacement = isSelectionReplacement;
+            HasActiveSuggestion = badgeType != SuggestionBadgeType.Clean;
 
             SuggestionText.Text = displayLabel;
+            HotkeyBadge.Visibility = Visibility.Visible;
 
             var bc = new BrushConverter();
-            if (isCorrection)
+            switch (badgeType)
             {
-                ModeBadge.Background = (Brush)bc.ConvertFromString("#10B981")!;
-                ModeText.Text = "⚡ FIX";
-                PillBorder.BorderBrush = (Brush)bc.ConvertFromString("#34D399")!;
-            }
-            else
-            {
-                ModeBadge.Background = (Brush)bc.ConvertFromString("#6366F1")!;
-                ModeText.Text = "✨ NEXT";
-                PillBorder.BorderBrush = (Brush)bc.ConvertFromString("#818CF8")!;
+                case SuggestionBadgeType.Fix:
+                    ModeBadge.Background = (Brush)bc.ConvertFromString("#10B981")!;
+                    ModeText.Text = "⚡ FIX";
+                    PillBorder.BorderBrush = (Brush)bc.ConvertFromString("#34D399")!;
+                    HotkeyText.Text = "Ctrl + Space";
+                    break;
+                case SuggestionBadgeType.Next:
+                    ModeBadge.Background = (Brush)bc.ConvertFromString("#6366F1")!;
+                    ModeText.Text = "✨ NEXT";
+                    PillBorder.BorderBrush = (Brush)bc.ConvertFromString("#818CF8")!;
+                    HotkeyText.Text = "Ctrl + Space";
+                    break;
+                case SuggestionBadgeType.Clean:
+                    ModeBadge.Background = (Brush)bc.ConvertFromString("#059669")!;
+                    ModeText.Text = "✓ CLEAN";
+                    PillBorder.BorderBrush = (Brush)bc.ConvertFromString("#10B981")!;
+                    HotkeyBadge.Visibility = Visibility.Collapsed;
+                    break;
             }
 
-            // Position calculation with offset below caret
-            double targetX = caretScreenPos.X;
-            double targetY = caretScreenPos.Y + caretHeight + 4;
+            // Calculate position
+            double targetX = screenPos.X;
+            double targetY = isAbovePosition
+                ? (screenPos.Y - 45) // Float slightly above cursor/menu
+                : (screenPos.Y + heightOffset + 4); // Float below caret
 
             // Clamping to screen boundaries
             double screenW = SystemParameters.PrimaryScreenWidth;
             double screenH = SystemParameters.PrimaryScreenHeight;
 
-            if (targetX + 280 > screenW)
-                targetX = Math.Max(10, screenW - 300);
+            if (targetX + 320 > screenW)
+                targetX = Math.Max(10, screenW - 340);
             if (targetY + 60 > screenH)
-                targetY = Math.Max(10, caretScreenPos.Y - 45); // Flip above caret if near bottom of screen
+                targetY = Math.Max(10, screenPos.Y - 45);
+            if (targetY < 10)
+                targetY = Math.Min(screenH - 60, screenPos.Y + 28);
 
             Left = Math.Max(10, targetX);
             Top = Math.Max(10, targetY);
 
             Show();
 
-            // Restart 5-second auto-dismiss timer
+            // Set auto-hide interval (1.8s for clean status, 5s for suggestions)
             _autoHideTimer.Stop();
+            _autoHideTimer.Interval = (badgeType == SuggestionBadgeType.Clean)
+                ? TimeSpan.FromSeconds(1.8)
+                : TimeSpan.FromSeconds(5.0);
             _autoHideTimer.Start();
         });
+    }
+
+    public void ShowCleanStatus(Point screenPos, string message = "0 changes needed")
+    {
+        ShowSuggestion(
+            screenPos: screenPos,
+            heightOffset: 0,
+            displayLabel: message,
+            insertionText: string.Empty,
+            badgeType: SuggestionBadgeType.Clean,
+            backspaces: 0,
+            isSelectionReplacement: false,
+            isAbovePosition: true
+        );
     }
 
     public void HideOverlay()
@@ -115,8 +158,17 @@ public partial class CaretOverlayWindow : Window
             HasActiveSuggestion = false;
             CurrentInsertion = string.Empty;
             CurrentBackspaces = 0;
+            IsSelectionReplacement = false;
             Hide();
         });
+    }
+
+    private void OnContentClick(object sender, MouseButtonEventArgs e)
+    {
+        if (HasActiveSuggestion)
+        {
+            SuggestionAccepted?.Invoke(this, EventArgs.Empty);
+        }
     }
 
     private void OnDismissClick(object sender, MouseButtonEventArgs e)

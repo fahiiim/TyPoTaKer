@@ -16,6 +16,7 @@ public partial class App : System.Windows.Application
     private TyPoInferenceEngine? _engine;
     private CaretOverlayWindow? _overlay;
     private KeyboardHook? _hook;
+    private MouseHook? _mouseHook;
     private TrayManager? _tray;
     private System.Timers.Timer? _debounceTimer;
     private CancellationTokenSource? _inferenceCts;
@@ -23,6 +24,16 @@ public partial class App : System.Windows.Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        AppDomain.CurrentDomain.UnhandledException += (s, args) =>
+        {
+            try { File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "crash.log"), args.ExceptionObject?.ToString() ?? "Unknown error"); } catch { }
+        };
+        DispatcherUnhandledException += (s, args) =>
+        {
+            try { File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "crash.log"), args.Exception.ToString()); } catch { }
+            args.Handled = true;
+        };
 
         string root = FindWorkspaceRoot();
         string vocab = Path.Combine(root, @"data\tokenizer\vocab.json");
@@ -36,6 +47,7 @@ public partial class App : System.Windows.Application
             _engine = new TyPoInferenceEngine(vocab, merges, lm, gec, maps);
             _overlay = new CaretOverlayWindow();
             _hook = new KeyboardHook();
+            _mouseHook = new MouseHook();
             _tray = new TrayManager();
 
             // 60ms fast typing debouncer for snappy response
@@ -51,6 +63,12 @@ public partial class App : System.Windows.Application
 
             _hook.AcceptRequested += OnAcceptRequested;
             _hook.DismissRequested += (s, args) => _overlay.HideOverlay();
+            _hook.SelectionDetected += (s, args) => _mouseHook.NotifyExternalSelection();
+            _hook.SelectionCleared += (s, args) => _mouseHook.ClearSelection();
+
+            _mouseHook.RightClickSelectionRequested += OnRightClickSelection;
+
+            _overlay.SuggestionAccepted += OnAcceptRequested;
             _overlay.DismissClicked += (s, args) =>
             {
                 if (_hook != null) _hook.IsDismissed = true;
@@ -60,12 +78,14 @@ public partial class App : System.Windows.Application
             _tray.EnabledToggled += (s, enabled) =>
             {
                 if (_hook != null) _hook.IsEnabled = enabled;
+                if (_mouseHook != null) _mouseHook.IsEnabled = enabled;
                 if (!enabled) _overlay.HideOverlay();
             };
 
             _tray.ResetRequested += (s, args) =>
             {
                 _hook.ClearBuffer();
+                _mouseHook.ClearSelection();
                 _overlay.HideOverlay();
                 _tray.ShowNotification("Buffer Reset", "Typing context buffer cleared.");
             };
@@ -76,10 +96,11 @@ public partial class App : System.Windows.Application
             };
 
             _hook.Start();
+            _mouseHook.Start();
 
             _tray.ShowNotification(
                 "TyPoTaKer Active",
-                "Ready for typing! Press Ctrl+Space to accept suggestions. Icon running in tray."
+                "Ready for typing and right-click correction! Press Ctrl+Space to accept. Running in tray."
             );
         }
         catch (Exception ex)
@@ -140,7 +161,7 @@ public partial class App : System.Windows.Application
         char lastChar = rawText[rawText.Length - 1];
         bool isWordBoundary = char.IsWhiteSpace(lastChar) || char.IsPunctuation(lastChar);
 
-        // Only offer suggestions when a word, sentence, or line has been completed
+        // Only offer typing suggestions when a word, sentence, or line has been completed
         if (!isWordBoundary)
         {
             Dispatcher.Invoke(() => _overlay?.HideOverlay());
@@ -173,12 +194,14 @@ public partial class App : System.Windows.Application
                         string displayLabel = $"{orig} → {repl}";
 
                         _overlay.ShowSuggestion(
-                            caretScreenPos: caret.ScreenPosition,
-                            caretHeight: caret.CaretHeight,
+                            screenPos: caret.ScreenPosition,
+                            heightOffset: caret.CaretHeight,
                             displayLabel: displayLabel,
                             insertionText: insertion,
-                            isCorrection: true,
-                            backspaces: backspaces
+                            badgeType: SuggestionBadgeType.Fix,
+                            backspaces: backspaces,
+                            isSelectionReplacement: false,
+                            isAbovePosition: false
                         );
                         return;
                     }
@@ -187,14 +210,16 @@ public partial class App : System.Windows.Application
             else
             {
                 // Multi-error sentence correction
-                string displayLabel = $"Fix line: {gecResult.CorrectedText}";
+                string displayLabel = $"Fix: {gecResult.CorrectedText}";
                 _overlay.ShowSuggestion(
-                    caretScreenPos: caret.ScreenPosition,
-                    caretHeight: caret.CaretHeight,
+                    screenPos: caret.ScreenPosition,
+                    heightOffset: caret.CaretHeight,
                     displayLabel: displayLabel,
                     insertionText: gecResult.CorrectedText,
-                    isCorrection: true,
-                    backspaces: activeSentence.Length
+                    badgeType: SuggestionBadgeType.Fix,
+                    backspaces: activeSentence.Length,
+                    isSelectionReplacement: false,
+                    isAbovePosition: false
                 );
                 return;
             }
@@ -213,12 +238,14 @@ public partial class App : System.Windows.Application
             if (!string.IsNullOrWhiteSpace(completion))
             {
                 _overlay.ShowSuggestion(
-                    caretScreenPos: caret.ScreenPosition,
-                    caretHeight: caret.CaretHeight,
+                    screenPos: caret.ScreenPosition,
+                    heightOffset: caret.CaretHeight,
                     displayLabel: completion,
                     insertionText: completion,
-                    isCorrection: false,
-                    backspaces: 0
+                    badgeType: SuggestionBadgeType.Next,
+                    backspaces: 0,
+                    isSelectionReplacement: false,
+                    isAbovePosition: false
                 );
                 return;
             }
@@ -227,9 +254,63 @@ public partial class App : System.Windows.Application
         Dispatcher.Invoke(() => _overlay?.HideOverlay());
     }
 
-    /// <summary>
-    /// Extracts the current sentence or line being typed from the end of the text.
-    /// </summary>
+    private void OnRightClickSelection(object? sender, RightClickSelectionEventArgs e)
+    {
+        if (_engine == null || _overlay == null || _hook == null || !_hook.IsEnabled)
+            return;
+
+        Task.Run(() =>
+        {
+            // Tiny pause for the host app to update its selection/mouse state
+            Thread.Sleep(30);
+
+            string? selectedText = SelectionHelper.GetSelectedText(e.HasLikelySelection ? 100 : 40);
+            if (string.IsNullOrWhiteSpace(selectedText) || selectedText.Trim().Length < 2)
+            {
+                // No text selected; do not interfere with standard right-click context menu
+                return;
+            }
+
+            selectedText = selectedText.Trim();
+
+            // Run GEC inference on the selected line/sentence
+            var gecResult = _engine.CorrectSentence(selectedText, minEditProb: 0.50f, editMargin: 0.05f);
+
+            if (gecResult.HasCorrection &&
+                gecResult.Edits.Count > 0 &&
+                !string.Equals(gecResult.CorrectedText.Trim(), selectedText, StringComparison.OrdinalIgnoreCase))
+            {
+                string displayLabel;
+                if (gecResult.Edits.Count == 1)
+                {
+                    var edit = gecResult.Edits[0];
+                    displayLabel = $"{edit.Original.Trim()} → {edit.Replacement.Trim()}";
+                }
+                else
+                {
+                    string corr = gecResult.CorrectedText.Trim();
+                    displayLabel = corr.Length > 34 ? corr.Substring(0, 31) + "..." : corr;
+                }
+
+                _overlay.ShowSuggestion(
+                    screenPos: e.ScreenPosition,
+                    heightOffset: 0,
+                    displayLabel: displayLabel,
+                    insertionText: gecResult.CorrectedText,
+                    badgeType: SuggestionBadgeType.Fix,
+                    backspaces: 0,
+                    isSelectionReplacement: true,
+                    isAbovePosition: true
+                );
+            }
+            else
+            {
+                // If doesn't have any changes needed, display '0 changes needed' and auto-dismiss
+                _overlay.ShowCleanStatus(e.ScreenPosition, "0 changes needed");
+            }
+        });
+    }
+
     private static string ExtractActiveSentence(string text)
     {
         if (string.IsNullOrEmpty(text)) return string.Empty;
@@ -255,7 +336,6 @@ public partial class App : System.Windows.Application
             ? text.Substring(lastBreak + 1)
             : text;
 
-        // Cap to last 160 characters so we stay well within model window
         if (slice.Length > 160)
             slice = slice.Substring(slice.Length - 160);
 
@@ -268,10 +348,20 @@ public partial class App : System.Windows.Application
         {
             string insertion = _overlay.CurrentInsertion;
             int backspaces = _overlay.CurrentBackspaces;
+            bool isSelection = _overlay.IsSelectionReplacement;
             _overlay.HideOverlay();
 
-            // Simulate keystrokes into active document
-            KeyboardHook.SendText(insertion, backspaces);
+            if (isSelection)
+            {
+                // Text is currently selected in the active window.
+                // In Windows, typing or sending Unicode characters into selected text replaces the selection directly.
+                KeyboardHook.SendText(insertion, backspacesCount: 0);
+            }
+            else
+            {
+                // Keystroke replacement with backspaces
+                KeyboardHook.SendText(insertion, backspaces);
+            }
         }
     }
 
@@ -281,6 +371,7 @@ public partial class App : System.Windows.Application
         _inferenceCts?.Cancel();
         _inferenceCts?.Dispose();
         _hook?.Dispose();
+        _mouseHook?.Dispose();
         _tray?.Dispose();
         _engine?.Dispose();
         base.OnExit(e);
@@ -288,7 +379,6 @@ public partial class App : System.Windows.Application
 
     private static string FindWorkspaceRoot()
     {
-        // 1. Check current working directory
         string current = Directory.GetCurrentDirectory();
         if (Directory.Exists(Path.Combine(current, "data", "tokenizer")) &&
             Directory.Exists(Path.Combine(current, "export")))
@@ -296,7 +386,6 @@ public partial class App : System.Windows.Application
             return current;
         }
 
-        // 2. Search upwards from AppDomain BaseDirectory
         var dir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
         while (dir != null)
         {
@@ -308,7 +397,6 @@ public partial class App : System.Windows.Application
             dir = dir.Parent;
         }
 
-        // 3. Fallback: Desktop/TyPoTaKer if known
         string desktopPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "TyPoTaKer");
         if (Directory.Exists(desktopPath))
             return desktopPath;

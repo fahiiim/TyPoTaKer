@@ -28,6 +28,8 @@ public sealed class KeyboardHook : IDisposable
     public event EventHandler<TypingEventArgs>? TypingActivity;
     public event EventHandler? AcceptRequested;
     public event EventHandler? DismissRequested;
+    public event EventHandler? SelectionDetected;
+    public event EventHandler? SelectionCleared;
 
     public bool IsEnabled { get; set; } = true;
     public bool IsDismissed { get; set; } = false;
@@ -98,9 +100,17 @@ public sealed class KeyboardHook : IDisposable
                     DismissRequested?.Invoke(this, EventArgs.Empty);
                     return Win32Native.CallNextHookEx(_hookId, nCode, wParam, lParam);
                 }
+
+                // 3. Selection shortcuts: Ctrl + A, or Shift + Arrows/Home/End/PageUp/PageDown
+                bool isShift = (Win32Native.GetAsyncKeyState(0x10) & 0x8000) != 0; // VK_SHIFT = 0x10
+                if ((isCtrl && vk == 0x41) || (isShift && (vk >= 0x21 && vk <= 0x28)))
+                {
+                    SelectionDetected?.Invoke(this, EventArgs.Empty);
+                }
                 else if (vk == Win32Native.VK_RETURN)
                 {
                     IsDismissed = false;
+                    SelectionCleared?.Invoke(this, EventArgs.Empty);
                     lock (_lock)
                     {
                         _buffer.Append('\n');
@@ -112,6 +122,7 @@ public sealed class KeyboardHook : IDisposable
                 else if (vk == Win32Native.VK_BACK)
                 {
                     IsDismissed = false;
+                    SelectionCleared?.Invoke(this, EventArgs.Empty);
                     lock (_lock)
                     {
                         if (_buffer.Length > 0)
@@ -125,6 +136,7 @@ public sealed class KeyboardHook : IDisposable
                     if (c.HasValue && !char.IsControl(c.Value))
                     {
                         IsDismissed = false;
+                        SelectionCleared?.Invoke(this, EventArgs.Empty);
                         lock (_lock)
                         {
                             _buffer.Append(c.Value);
