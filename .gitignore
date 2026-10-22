@@ -39,3 +39,8 @@ desktop.ini
 .hf_cache/
 .cache/
 *.log
+
+# .NET
+bin/
+obj/
+*.user

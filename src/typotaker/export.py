@@ -76,6 +76,7 @@ def quantize_onnx(onnx_path: str, out_path: str | None = None) -> str:
     quantize_dynamic(
         model_input=str(src),
         model_output=str(dst),
+        op_types_to_quantize=["MatMul", "Gemm"],
         weight_type=QuantType.QInt8,
     )
     print(f"quantized ONNX (INT8) -> {dst}")
