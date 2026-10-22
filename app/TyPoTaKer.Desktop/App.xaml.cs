@@ -176,7 +176,7 @@ public partial class App : System.Windows.Application
         if (ct.IsCancellationRequested) return;
 
         // 1. High-Priority: Check GEC grammar and typo corrections on the active sentence/phrase
-        var gecResult = _engine.CorrectSentence(activeSentence, minEditProb: 0.60f, editMargin: 0.08f);
+        var gecResult = _engine.CorrectSentence(activeSentence, minEditProb: 0.65f, editMargin: 0.08f);
         if (gecResult.HasCorrection && gecResult.Edits.Count > 0)
         {
             if (ct.IsCancellationRequested) return;
@@ -234,7 +234,7 @@ public partial class App : System.Windows.Application
 
         // 2. Second-Priority: Contextual autocomplete suggestions on the completed word boundary
         var suggestions = _engine.GetAutocomplete(activeSentence, topK: 1);
-        if (suggestions.Count > 0 && suggestions[0].Probability >= 0.08f)
+        if (suggestions.Count > 0 && suggestions[0].Probability >= 0.015f)
         {
             if (ct.IsCancellationRequested) return;
 
@@ -279,7 +279,7 @@ public partial class App : System.Windows.Application
             selectedText = selectedText.Trim();
 
             // Run GEC inference on the selected line/sentence
-            var gecResult = _engine.CorrectSentence(selectedText, minEditProb: 0.50f, editMargin: 0.05f);
+            var gecResult = _engine.CorrectSentence(selectedText, minEditProb: 0.65f, editMargin: 0.08f);
 
             if (gecResult.HasCorrection &&
                 gecResult.Edits.Count > 0 &&

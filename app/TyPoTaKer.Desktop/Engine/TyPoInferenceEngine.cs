@@ -30,6 +30,42 @@ public sealed class TyPoInferenceEngine : IDisposable
     private readonly InferenceSession _gecSession;
     private readonly Dictionary<int, int> _idToReplace = new();
     private readonly Dictionary<int, int> _idToAppend = new();
+    private readonly HashSet<string> _validWords = new(StringComparer.OrdinalIgnoreCase);
+
+    private static readonly HashSet<string> ExcludedCompletions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "iv", "ix", "vi", "vii", "viii", "xi", "xii", "xiii", "xiv", "xv", "xvi", "ii", "iii", "v", "x"
+    };
+
+    private static readonly Dictionary<char, string> QwertyNeighbors = new()
+    {
+        ['a'] = "qwsz",
+        ['b'] = "vghn",
+        ['c'] = "xdfv",
+        ['d'] = "serfcx",
+        ['e'] = "wsdr",
+        ['f'] = "drtgvc",
+        ['g'] = "ftyhbvj",
+        ['h'] = "gyujnb",
+        ['i'] = "ujko",
+        ['j'] = "huikmng",
+        ['k'] = "jiolm",
+        ['l'] = "kop",
+        ['m'] = "njk",
+        ['n'] = "bhjm",
+        ['o'] = "iklp",
+        ['p'] = "ol",
+        ['q'] = "wa",
+        ['r'] = "edft",
+        ['s'] = "awedxz",
+        ['t'] = "rfgy",
+        ['u'] = "yhj",
+        ['v'] = "cfgb",
+        ['w'] = "qase",
+        ['x'] = "zsdc",
+        ['y'] = "tghu",
+        ['z'] = "asx"
+    };
 
     public TyPoInferenceEngine(
         string vocabPath,
@@ -48,6 +84,41 @@ public sealed class TyPoInferenceEngine : IDisposable
         _lmSession = new InferenceSession(lmModelPath, sessOpts);
         _gecSession = new InferenceSession(gecModelPath, sessOpts);
 
+        // Populate valid English words from vocabulary
+        if (File.Exists(vocabPath))
+        {
+            try
+            {
+                var vocabJson = JsonDocument.Parse(File.ReadAllText(vocabPath));
+                foreach (var prop in vocabJson.RootElement.EnumerateObject())
+                {
+                    string key = prop.Name;
+                    string clean = key.Replace("Ġ", "").Replace("\u0120", "").Trim().ToLowerInvariant();
+                    if (clean.Length > 1 && clean.All(char.IsLetter))
+                    {
+                        _validWords.Add(clean);
+                    }
+                }
+            }
+            catch { }
+        }
+
+        // Add curated informal words, contractions, modern tech terms, and slang
+        string[] extraWords = new[]
+        {
+            "wanna", "gonna", "gotta", "kinda", "sorta", "dunno", "lemme", "gimme",
+            "boyfriend", "girlfriend", "online", "offline", "website", "super", "cool",
+            "ok", "okay", "yeah", "yep", "nope", "idk", "imo", "tbh", "btw", "fyi",
+            "pls", "thx", "msg", "txt", "sync", "wifi", "login", "logout", "signup", "signin",
+            "setup", "plugin", "plugins", "subagent", "subagents", "repo", "repos",
+            "github", "reddit", "youtube", "google", "chatgpt", "typo", "typotaker",
+            "hey", "hi", "hello", "bye", "bro", "dude", "guy", "guys", "thanks", "welcome",
+            "sorry", "please", "cant", "dont", "wont", "isnt", "arent", "wasnt", "werent",
+            "hasnt", "havent", "hadnt", "doesnt", "didnt", "couldnt", "shouldnt", "wouldnt",
+            "ain't", "cause", "cuz", "shoulder", "shoulders"
+        };
+        foreach (var w in extraWords) _validWords.Add(w);
+
         if (File.Exists(editMapsPath))
         {
             var mapsJson = JsonDocument.Parse(File.ReadAllText(editMapsPath));
@@ -64,12 +135,26 @@ public sealed class TyPoInferenceEngine : IDisposable
         }
     }
 
+    public bool IsValidWord(string word)
+    {
+        if (string.IsNullOrWhiteSpace(word)) return true;
+        string clean = word.Trim(".,!?:;\"'()[]{}<>-/\\".ToCharArray()).ToLowerInvariant();
+        if (clean.Length == 0) return true;
+        if (clean.Length == 1) return clean == "a" || clean == "i";
+        return _validWords.Contains(clean);
+    }
+
     public List<AutocompleteSuggestion> GetAutocomplete(string text, int topK = 3)
     {
         if (string.IsNullOrWhiteSpace(text))
             return new List<AutocompleteSuggestion>();
 
-        var (tokenIds, tokenPieces) = _tokenizer.Encode(text, addBos: true, addEos: false);
+        // Always trim trailing whitespace for next-word completion context
+        string trimmed = text.TrimEnd();
+        if (string.IsNullOrWhiteSpace(trimmed))
+            return new List<AutocompleteSuggestion>();
+
+        var (tokenIds, tokenPieces) = _tokenizer.Encode(trimmed, addBos: true, addEos: false);
         int seqLen = tokenIds.Count;
         if (seqLen < 2) return new List<AutocompleteSuggestion>();
 
@@ -112,18 +197,42 @@ public sealed class TyPoInferenceEngine : IDisposable
         }
         for (int v = 0; v < vocabSize; v++) probs[v] /= sumExp;
 
-        return probs
+        var ranked = probs
             .Select((p, idx) => (p, idx))
-            .Where(x => x.idx > 3) // skip special tokens
+            .Where(x => x.idx > 3)
             .OrderByDescending(x => x.p)
-            .Take(topK)
-            .Select(x => new AutocompleteSuggestion
+            .Take(150);
+
+        var suggestions = new List<AutocompleteSuggestion>();
+
+        foreach (var (p, idx) in ranked)
+        {
+            if (p < 0.015f) break;
+
+            string decoded = _tokenizer.Decode(new[] { idx });
+            // In BPE decoding, tokens starting with space represent whole new words
+            if (!decoded.StartsWith(" "))
+                continue;
+
+            string clean = decoded.Trim();
+            if (clean.Length == 0) continue;
+            if (clean.Length == 1 && clean != "a" && clean != "A" && clean != "I") continue;
+            if (!clean.All(char.IsLetter)) continue;
+            if (ExcludedCompletions.Contains(clean)) continue;
+            if (!_validWords.Contains(clean)) continue;
+
+            suggestions.Add(new AutocompleteSuggestion
             {
-                Text = _tokenizer.Decode(new[] { x.idx }),
-                Probability = x.p,
-                TokenId = x.idx
-            })
-            .ToList();
+                Text = clean,
+                Probability = p,
+                TokenId = idx
+            });
+
+            if (suggestions.Count >= topK)
+                break;
+        }
+
+        return suggestions;
     }
 
     public CorrectionResult CorrectSentence(string text, float minEditProb = 0.65f, float editMargin = 0.08f)
@@ -139,7 +248,11 @@ public sealed class TyPoInferenceEngine : IDisposable
             };
         }
 
-        var (tokenIds, tokenPieces) = _tokenizer.Encode(text, addBos: true, addEos: true);
+        string trimmedText = text.Trim();
+        string[] originalWords = trimmedText.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+        bool allOriginalWordsValid = originalWords.All(IsValidWord);
+
+        var (tokenIds, tokenPieces) = _tokenizer.Encode(trimmedText, addBos: true, addEos: true);
         int seqLen = tokenIds.Count;
 
         var charArray = _tokenizer.BuildCharTensor(tokenPieces);
@@ -163,7 +276,6 @@ public sealed class TyPoInferenceEngine : IDisposable
 
         int numLabels = logits.Dimensions[2];
         var finalIds = new List<int>();
-        var edits = new List<(string Original, string Replacement, float Confidence)>();
 
         for (int t = 0; t < seqLen; t++)
         {
@@ -200,9 +312,31 @@ public sealed class TyPoInferenceEngine : IDisposable
                 bestLabel = 0;
             }
 
+            // Sub-token protection:
+            // If all words in the input text are valid words, never edit sub-tokens (tokens without leading space)
+            // unless the model is extremely certain (>= 0.92f)
+            if (bestLabel != 0 && t > 0 && t < seqLen - 1)
+            {
+                string decodedPiece = _tokenizer.Decode(new[] { tid });
+                bool isSubToken = !decodedPiece.StartsWith(" ");
+
+                if (isSubToken && allOriginalWordsValid && bestProb < 0.92f)
+                {
+                    bestLabel = 0; // Protect sub-token of valid word!
+                }
+                else if (isSubToken && bestLabel >= 4 && _idToReplace.TryGetValue(bestLabel, out int checkRepId))
+                {
+                    string repDecoded = _tokenizer.Decode(new[] { checkRepId });
+                    // A suffix cannot be replaced with a token having a leading space (e.g. anna -> " and")
+                    if (repDecoded.StartsWith(" "))
+                    {
+                        bestLabel = 0;
+                    }
+                }
+            }
+
             if (bestLabel == 1) // DELETE
             {
-                edits.Add((_tokenizer.Decode(new[] { tid }), string.Empty, bestProb));
                 continue;
             }
 
@@ -216,7 +350,6 @@ public sealed class TyPoInferenceEngine : IDisposable
                     var (recIds, _) = _tokenizer.Encode(cap, addBos: false, addEos: false);
                     if (recIds.Count > 0) targetToken = (int)recIds[0];
                 }
-                edits.Add((_tokenizer.Decode(new[] { tid }), _tokenizer.Decode(new[] { targetToken }), bestProb));
             }
             else if (bestLabel == 3) // CASE_LOWER
             {
@@ -227,12 +360,10 @@ public sealed class TyPoInferenceEngine : IDisposable
                     var (recIds, _) = _tokenizer.Encode(lower, addBos: false, addEos: false);
                     if (recIds.Count > 0) targetToken = (int)recIds[0];
                 }
-                edits.Add((_tokenizer.Decode(new[] { tid }), _tokenizer.Decode(new[] { targetToken }), bestProb));
             }
             else if (bestLabel >= 4 && _idToReplace.TryGetValue(bestLabel, out int repId))
             {
                 targetToken = repId;
-                edits.Add((_tokenizer.Decode(new[] { tid }), _tokenizer.Decode(new[] { repId }), bestProb));
             }
 
             finalIds.Add(targetToken);
@@ -240,16 +371,37 @@ public sealed class TyPoInferenceEngine : IDisposable
             if (bestLabel >= 4 && _idToAppend.TryGetValue(bestLabel, out int appId))
             {
                 finalIds.Add(appId);
-                edits.Add((string.Empty, _tokenizer.Decode(new[] { appId }), bestProb));
             }
         }
 
         string corrected = _tokenizer.Decode(finalIds).Trim();
-        bool hasCorrection = edits.Count > 0 && !string.Equals(corrected, text.Trim(), StringComparison.Ordinal);
+        bool hasCorrection = !string.Equals(corrected, trimmedText, StringComparison.Ordinal);
 
-        if (!hasCorrection)
+        var edits = new List<(string Original, string Replacement, float Confidence)>();
+
+        if (hasCorrection)
         {
-            var hybridRescore = TryRescoreWithQwertyLm(text);
+            // Word-level extraction so edits are ALWAYS whole words (no "anna -> and")
+            edits = ExtractWordEdits(trimmedText, corrected);
+
+            // Filter out edits where original word was already valid but replacement is invalid
+            edits = edits.Where(e =>
+            {
+                if (IsValidWord(e.Original) && !IsValidWord(e.Replacement)) return false;
+                return !string.Equals(e.Original, e.Replacement, StringComparison.OrdinalIgnoreCase);
+            }).ToList();
+
+            if (edits.Count == 0)
+            {
+                hasCorrection = false;
+                corrected = trimmedText;
+            }
+        }
+
+        // Only run QWERTY LM rescoring if GEC found nothing AND there is an unrecognized word in the text!
+        if (!hasCorrection && !allOriginalWordsValid)
+        {
+            var hybridRescore = TryRescoreWithQwertyLm(trimmedText);
             if (hybridRescore != null)
             {
                 return hybridRescore;
@@ -260,48 +412,45 @@ public sealed class TyPoInferenceEngine : IDisposable
         {
             HasCorrection = hasCorrection,
             OriginalText = text,
-            CorrectedText = corrected,
+            CorrectedText = hasCorrection ? corrected : text,
             Edits = edits
         };
     }
 
-    private static readonly Dictionary<char, string> QwertyNeighbors = new()
+    private static List<(string Original, string Replacement, float Confidence)> ExtractWordEdits(string origText, string corrText)
     {
-        ['a'] = "qwsz",
-        ['b'] = "vghn",
-        ['c'] = "xdfv",
-        ['d'] = "serfcx",
-        ['e'] = "wsdr",
-        ['f'] = "drtgvc",
-        ['g'] = "ftyhbvj",
-        ['h'] = "gyujnb",
-        ['i'] = "ujko",
-        ['j'] = "huikmng",
-        ['k'] = "jiolm",
-        ['l'] = "kop",
-        ['m'] = "njk",
-        ['n'] = "bhjm",
-        ['o'] = "iklp",
-        ['p'] = "ol",
-        ['q'] = "wa",
-        ['r'] = "edft",
-        ['s'] = "awedxz",
-        ['t'] = "rfgy",
-        ['u'] = "yhj",
-        ['v'] = "cfgb",
-        ['w'] = "qase",
-        ['x'] = "zsdc",
-        ['y'] = "tghu",
-        ['z'] = "asx"
-    };
+        var edits = new List<(string Original, string Replacement, float Confidence)>();
+        string[] origWords = origText.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+        string[] corrWords = corrText.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
 
-    public static HashSet<string> GenerateCandidates(string word)
+        if (origWords.Length == corrWords.Length)
+        {
+            for (int i = 0; i < origWords.Length; i++)
+            {
+                string o = origWords[i].Trim(".,!?:;\"'()[]{}<>-/\\".ToCharArray());
+                string c = corrWords[i].Trim(".,!?:;\"'()[]{}<>-/\\".ToCharArray());
+                if (!string.Equals(o, c, StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(o) && !string.IsNullOrEmpty(c))
+                {
+                    edits.Add((origWords[i], corrWords[i], 0.90f));
+                }
+            }
+        }
+        else
+        {
+            // Sentence-level replacement
+            edits.Add((origText, corrText, 0.85f));
+        }
+
+        return edits;
+    }
+
+    public List<string> GenerateCandidates(string word)
     {
-        var cands = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var cands = new List<string>();
         string w = word.ToLowerInvariant();
         if (w.Length == 0) return cands;
 
-        // 1. QWERTY neighbor substitution
+        // 1. QWERTY neighbor substitution (only 1 edit distance)
         for (int i = 0; i < w.Length; i++)
         {
             char c = w[i];
@@ -309,7 +458,12 @@ public sealed class TyPoInferenceEngine : IDisposable
             {
                 foreach (char n in neighbors)
                 {
-                    cands.Add(w.Substring(0, i) + n + w.Substring(i + 1));
+                    string cand = w.Substring(0, i) + n + w.Substring(i + 1);
+                    if (_validWords.Contains(cand) && !cands.Contains(cand))
+                    {
+                        cands.Add(cand);
+                        if (cands.Count >= 6) return cands;
+                    }
                 }
             }
         }
@@ -321,23 +475,25 @@ public sealed class TyPoInferenceEngine : IDisposable
             char tmp = arr[i];
             arr[i] = arr[i + 1];
             arr[i + 1] = tmp;
-            cands.Add(new string(arr));
+            string cand = new string(arr);
+            if (_validWords.Contains(cand) && !cands.Contains(cand))
+            {
+                cands.Add(cand);
+                if (cands.Count >= 6) return cands;
+            }
         }
 
         // 3. 1-character deletion
         for (int i = 0; i < w.Length; i++)
         {
-            cands.Add(w.Substring(0, i) + w.Substring(i + 1));
+            string cand = w.Substring(0, i) + w.Substring(i + 1);
+            if (_validWords.Contains(cand) && !cands.Contains(cand))
+            {
+                cands.Add(cand);
+                if (cands.Count >= 6) return cands;
+            }
         }
 
-        // 4. Common suffixes for incomplete words
-        string[] suffixes = { "n", "ing", "ed", "s", "e", "d", "t" };
-        foreach (var s in suffixes)
-        {
-            cands.Add(w + s);
-        }
-
-        cands.Remove(w);
         return cands;
     }
 
@@ -401,71 +557,67 @@ public sealed class TyPoInferenceEngine : IDisposable
         string[] rawTokens = text.Split(' ');
         if (rawTokens.Length == 0) return null;
 
-        float baseNll = CalculateSentenceNll(text);
-        float bestNll = baseNll;
-        int bestIdx = -1;
-        string? bestOrig = null;
-        string? bestReplacement = null;
-
+        // Find the FIRST word that is NOT a valid word
+        int suspiciousIdx = -1;
+        string? suspiciousClean = null;
         for (int i = 0; i < rawTokens.Length; i++)
         {
-            string raw = rawTokens[i];
-            string clean = raw.Trim(".,!?:;\"'()[]{}".ToCharArray());
-            if (clean.Length < 2) continue;
-
-            var candidates = GenerateCandidates(clean);
-            foreach (var cand in candidates)
+            string clean = rawTokens[i].Trim(".,!?:;\"'()[]{}<>-/\\".ToCharArray());
+            if (clean.Length > 1 && !IsValidWord(clean))
             {
-                if (string.Equals(cand, clean, StringComparison.OrdinalIgnoreCase)) continue;
-
-                // Match original casing
-                string casedCand = char.IsUpper(clean[0])
-                    ? char.ToUpperInvariant(cand[0]) + (cand.Length > 1 ? cand.Substring(1) : "")
-                    : cand;
-
-                int startPunct = 0;
-                while (startPunct < raw.Length && char.IsPunctuation(raw[startPunct])) startPunct++;
-                string leading = startPunct > 0 ? raw.Substring(0, startPunct) : "";
-
-                int endPunct = raw.Length - 1;
-                while (endPunct >= startPunct && char.IsPunctuation(raw[endPunct])) endPunct--;
-                string trailing = (endPunct < raw.Length - 1) ? raw.Substring(endPunct + 1) : "";
-
-                string replacementToken = leading + casedCand + trailing;
-
-                string[] candidateTokens = (string[])rawTokens.Clone();
-                candidateTokens[i] = replacementToken;
-                string candidateSentence = string.Join(" ", candidateTokens);
-
-                float candNll = CalculateSentenceNll(candidateSentence);
-
-                // Significant threshold: at least 3.5 nats improvement (33x more probable)
-                if (candNll < bestNll - 3.5f)
-                {
-                    bestNll = candNll;
-                    bestIdx = i;
-                    bestOrig = clean;
-                    bestReplacement = casedCand;
-                }
+                suspiciousIdx = i;
+                suspiciousClean = clean;
+                break;
             }
         }
 
-        if (bestIdx >= 0 && bestOrig != null && bestReplacement != null)
+        // If all words are valid English words, no QWERTY rescoring is needed!
+        if (suspiciousIdx < 0 || suspiciousClean == null) return null;
+
+        var candidates = GenerateCandidates(suspiciousClean);
+        if (candidates.Count == 0) return null;
+
+        float baseNll = CalculateSentenceNll(text);
+        float bestNll = baseNll;
+        string? bestReplacement = null;
+
+        string raw = rawTokens[suspiciousIdx];
+        int startPunct = 0;
+        while (startPunct < raw.Length && char.IsPunctuation(raw[startPunct])) startPunct++;
+        string leading = startPunct > 0 ? raw.Substring(0, startPunct) : "";
+
+        int endPunct = raw.Length - 1;
+        while (endPunct >= startPunct && char.IsPunctuation(raw[endPunct])) endPunct--;
+        string trailing = (endPunct < raw.Length - 1) ? raw.Substring(endPunct + 1) : "";
+
+        foreach (var cand in candidates)
+        {
+            if (string.Equals(cand, suspiciousClean, StringComparison.OrdinalIgnoreCase)) continue;
+
+            string casedCand = char.IsUpper(suspiciousClean[0])
+                ? char.ToUpperInvariant(cand[0]) + (cand.Length > 1 ? cand.Substring(1) : "")
+                : cand;
+
+            string replacementToken = leading + casedCand + trailing;
+            string[] candidateTokens = (string[])rawTokens.Clone();
+            candidateTokens[suspiciousIdx] = replacementToken;
+            string candidateSentence = string.Join(" ", candidateTokens);
+
+            float candNll = CalculateSentenceNll(candidateSentence);
+
+            if (candNll < bestNll - 2.8f) // Significant improvement
+            {
+                bestNll = candNll;
+                bestReplacement = casedCand;
+            }
+        }
+
+        if (bestReplacement != null)
         {
             string[] finalTokens = (string[])rawTokens.Clone();
-            int startPunct = 0;
-            string raw = rawTokens[bestIdx];
-            while (startPunct < raw.Length && char.IsPunctuation(raw[startPunct])) startPunct++;
-            string leading = startPunct > 0 ? raw.Substring(0, startPunct) : "";
-
-            int endPunct = raw.Length - 1;
-            while (endPunct >= startPunct && char.IsPunctuation(raw[endPunct])) endPunct--;
-            string trailing = (endPunct < raw.Length - 1) ? raw.Substring(endPunct + 1) : "";
-
-            finalTokens[bestIdx] = leading + bestReplacement + trailing;
+            finalTokens[suspiciousIdx] = leading + bestReplacement + trailing;
             string correctedText = string.Join(" ", finalTokens);
-
-            float conf = 1.0f - MathF.Exp(-(baseNll - bestNll));
+            float conf = Math.Clamp(1.0f - MathF.Exp(-(baseNll - bestNll)), 0.60f, 0.98f);
 
             return new CorrectionResult
             {
@@ -474,7 +626,7 @@ public sealed class TyPoInferenceEngine : IDisposable
                 CorrectedText = correctedText,
                 Edits = new List<(string Original, string Replacement, float Confidence)>
                 {
-                    (bestOrig, bestReplacement, conf)
+                    (suspiciousClean, bestReplacement, conf)
                 }
             };
         }
