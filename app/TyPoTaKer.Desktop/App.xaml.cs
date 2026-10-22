@@ -137,6 +137,16 @@ public partial class App : System.Windows.Application
             return;
         }
 
+        char lastChar = rawText[rawText.Length - 1];
+        bool isWordBoundary = char.IsWhiteSpace(lastChar) || char.IsPunctuation(lastChar);
+
+        // Only offer suggestions when a word, sentence, or line has been completed
+        if (!isWordBoundary)
+        {
+            Dispatcher.Invoke(() => _overlay?.HideOverlay());
+            return;
+        }
+
         if (ct.IsCancellationRequested) return;
 
         // 1. High-Priority: Check GEC grammar and typo corrections on the active sentence/phrase
@@ -145,48 +155,73 @@ public partial class App : System.Windows.Application
         {
             if (ct.IsCancellationRequested) return;
 
-            string displayLabel;
+            // Single word correction: target ONLY the mistyped word
             if (gecResult.Edits.Count == 1)
             {
                 var edit = gecResult.Edits[0];
-                string orig = string.IsNullOrEmpty(edit.Original) ? "..." : edit.Original.Trim();
-                string repl = string.IsNullOrEmpty(edit.Replacement) ? "..." : edit.Replacement.Trim();
-                displayLabel = $"{orig} → {repl}";
+                string orig = edit.Original.Trim();
+                string repl = edit.Replacement.Trim();
+
+                if (!string.IsNullOrEmpty(orig) && !string.IsNullOrEmpty(repl) && !string.Equals(orig, repl, StringComparison.OrdinalIgnoreCase))
+                {
+                    int lastOrigIdx = activeSentence.LastIndexOf(orig, StringComparison.OrdinalIgnoreCase);
+                    if (lastOrigIdx >= 0)
+                    {
+                        int backspaces = activeSentence.Length - lastOrigIdx;
+                        string trailing = activeSentence.Substring(lastOrigIdx + orig.Length);
+                        string insertion = repl + trailing;
+                        string displayLabel = $"{orig} → {repl}";
+
+                        _overlay.ShowSuggestion(
+                            caretScreenPos: caret.ScreenPosition,
+                            caretHeight: caret.CaretHeight,
+                            displayLabel: displayLabel,
+                            insertionText: insertion,
+                            isCorrection: true,
+                            backspaces: backspaces
+                        );
+                        return;
+                    }
+                }
             }
             else
             {
-                displayLabel = $"Fix line: {gecResult.CorrectedText}";
+                // Multi-error sentence correction
+                string displayLabel = $"Fix line: {gecResult.CorrectedText}";
+                _overlay.ShowSuggestion(
+                    caretScreenPos: caret.ScreenPosition,
+                    caretHeight: caret.CaretHeight,
+                    displayLabel: displayLabel,
+                    insertionText: gecResult.CorrectedText,
+                    isCorrection: true,
+                    backspaces: activeSentence.Length
+                );
+                return;
             }
-
-            _overlay.ShowSuggestion(
-                caretScreenPos: caret.ScreenPosition,
-                caretHeight: caret.CaretHeight,
-                displayLabel: displayLabel,
-                insertionText: gecResult.CorrectedText,
-                isCorrection: true,
-                backspaces: activeSentence.Length
-            );
-            return;
         }
 
         if (ct.IsCancellationRequested) return;
 
-        // 2. Second-Priority: Contextual autocomplete suggestions on the active text
+        // 2. Second-Priority: Contextual autocomplete suggestions on the completed word boundary
         var suggestions = _engine.GetAutocomplete(activeSentence, topK: 1);
         if (suggestions.Count > 0 && suggestions[0].Probability >= 0.08f)
         {
             if (ct.IsCancellationRequested) return;
 
             var best = suggestions[0];
-            _overlay.ShowSuggestion(
-                caretScreenPos: caret.ScreenPosition,
-                caretHeight: caret.CaretHeight,
-                displayLabel: best.Text,
-                insertionText: best.Text,
-                isCorrection: false,
-                backspaces: 0
-            );
-            return;
+            string completion = best.Text.Trim();
+            if (!string.IsNullOrWhiteSpace(completion))
+            {
+                _overlay.ShowSuggestion(
+                    caretScreenPos: caret.ScreenPosition,
+                    caretHeight: caret.CaretHeight,
+                    displayLabel: completion,
+                    insertionText: completion,
+                    isCorrection: false,
+                    backspaces: 0
+                );
+                return;
+            }
         }
 
         Dispatcher.Invoke(() => _overlay?.HideOverlay());

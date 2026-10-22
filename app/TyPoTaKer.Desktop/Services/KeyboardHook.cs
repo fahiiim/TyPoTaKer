@@ -75,7 +75,7 @@ public sealed class KeyboardHook : IDisposable
 
     private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
     {
-        if (nCode >= 0 && IsEnabled)
+        if (nCode >= 0 && IsEnabled && !IsSimulating)
         {
             int msg = wParam.ToInt32();
             if (msg == Win32Native.WM_KEYDOWN || msg == Win32Native.WM_SYSKEYDOWN)
@@ -159,6 +159,8 @@ public sealed class KeyboardHook : IDisposable
         return null;
     }
 
+    public static bool IsSimulating { get; set; } = false;
+
     /// <summary>
     /// Simulates keystrokes via Win32 SendInput to replace text directly in the active focused element.
     /// </summary>
@@ -172,12 +174,12 @@ public sealed class KeyboardHook : IDisposable
             inputs.Add(new Win32Native.INPUT
             {
                 type = Win32Native.INPUT_KEYBOARD,
-                ki = new Win32Native.KEYBDINPUT { wVk = Win32Native.VK_BACK }
+                ki = new Win32Native.KEYBDINPUT { wVk = Win32Native.VK_BACK, wScan = 0, dwFlags = 0 }
             });
             inputs.Add(new Win32Native.INPUT
             {
                 type = Win32Native.INPUT_KEYBOARD,
-                ki = new Win32Native.KEYBDINPUT { wVk = Win32Native.VK_BACK, dwFlags = Win32Native.KEYEVENTF_KEYUP }
+                ki = new Win32Native.KEYBDINPUT { wVk = Win32Native.VK_BACK, wScan = 0, dwFlags = Win32Native.KEYEVENTF_KEYUP }
             });
         }
 
@@ -187,19 +189,29 @@ public sealed class KeyboardHook : IDisposable
             inputs.Add(new Win32Native.INPUT
             {
                 type = Win32Native.INPUT_KEYBOARD,
-                ki = new Win32Native.KEYBDINPUT { wScan = (ushort)c, dwFlags = Win32Native.KEYEVENTF_UNICODE }
+                ki = new Win32Native.KEYBDINPUT { wVk = 0, wScan = (ushort)c, dwFlags = Win32Native.KEYEVENTF_UNICODE }
             });
             inputs.Add(new Win32Native.INPUT
             {
                 type = Win32Native.INPUT_KEYBOARD,
-                ki = new Win32Native.KEYBDINPUT { wScan = (ushort)c, dwFlags = Win32Native.KEYEVENTF_UNICODE | Win32Native.KEYEVENTF_KEYUP }
+                ki = new Win32Native.KEYBDINPUT { wVk = 0, wScan = (ushort)c, dwFlags = Win32Native.KEYEVENTF_UNICODE | Win32Native.KEYEVENTF_KEYUP }
             });
         }
 
         if (inputs.Count > 0)
         {
             var arr = inputs.ToArray();
-            Win32Native.SendInput((uint)arr.Length, arr, Marshal.SizeOf<Win32Native.INPUT>());
+            try
+            {
+                IsSimulating = true;
+                Win32Native.SendInput((uint)arr.Length, arr, Marshal.SizeOf<Win32Native.INPUT>());
+            }
+            finally
+            {
+                // Small sleep to ensure simulated inputs clear message queue
+                Thread.Sleep(15);
+                IsSimulating = false;
+            }
         }
     }
 

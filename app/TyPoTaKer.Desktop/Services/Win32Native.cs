@@ -66,10 +66,13 @@ public static class Win32Native
         public UIntPtr dwExtraInfo;
     }
 
-    [StructLayout(LayoutKind.Sequential)]
+    [StructLayout(LayoutKind.Explicit, Size = 40)]
     public struct INPUT
     {
+        [FieldOffset(0)]
         public uint type;
+
+        [FieldOffset(8)]
         public KEYBDINPUT ki;
     }
 
@@ -81,8 +84,6 @@ public static class Win32Native
         public uint dwFlags;
         public uint time;
         public UIntPtr dwExtraInfo;
-        public uint unused1;
-        public uint unused2;
     }
 
     [DllImport("user32.dll", SetLastError = true)]
