@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Windows;
 using TyPoTaKer.Desktop.Engine;
+using TyPoTaKer.Desktop.Services;
 
 namespace TyPoTaKer.Desktop;
 
@@ -41,7 +42,18 @@ public partial class App : Application
             {
                 Console.WriteLine($"  Edit: '{edit.Original}' -> '{edit.Replacement}' (conf={edit.Confidence:P1})");
             }
-            Console.WriteLine("=== Engine Self-Test Succeeded ===");
+
+            // Test CaretTracker & KeyboardHook
+            var caret = CaretTracker.GetCaretInfo();
+            Console.WriteLine($"CaretTracker Check: isVisible={caret.IsVisible}, pos=({caret.ScreenPosition.X},{caret.ScreenPosition.Y}), isPassword={caret.IsPassword}");
+
+            using var hook = new KeyboardHook();
+            hook.Start();
+            Console.WriteLine("KeyboardHook: started and hooked successfully!");
+            hook.Stop();
+            Console.WriteLine("KeyboardHook: stopped cleanly!");
+
+            Console.WriteLine("=== All Services & Engine Tests Passed ===");
         }
         catch (Exception ex)
         {
