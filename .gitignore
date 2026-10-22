@@ -11,11 +11,24 @@ venv/
 .env
 .python-version
 
-# Training artifacts
+# Large datasets (do not commit raw 800MB jsonl files or raw txt dumps)
 data/raw/
-data/processed/
-data/tokenizer/*.json
+data/processed/**/*.jsonl
+data/processed/*.jsonl
+data/processed/*.txt
+data/processed/**/*.txt
+
+# Tokenizer files (allow vocab and tokenizer)
+!data/tokenizer/vocab.json
+!data/tokenizer/merges.txt
+!data/tokenizer/tokenizer.json
 !data/tokenizer/.gitkeep
+
+# Edit maps needed for inference
+!data/processed/gec/v2/edit_maps.json
+!data/processed/gec/v3/edit_maps.json
+
+# Checkpoints & Models
 checkpoints/
 runs/
 logs/
@@ -24,6 +37,13 @@ logs/
 *.onnx
 *.gguf
 wandb/
+
+# Allow exported INT8 models (tracked via Git LFS)
+!export/gec_stage2_int8.onnx
+!export/lm_stage1_int8.onnx
+
+# Allow final Stage 2 PyTorch model weights (tracked via Git LFS)
+!checkpoints/gec_stage2/step_00008000/model.pt
 
 # IDE
 .idea/
