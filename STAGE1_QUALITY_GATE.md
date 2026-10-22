@@ -19,11 +19,15 @@ Determine whether the 39.1M-parameter Stage 1 model is a meaningful improvement 
 ## Workflow
 
 - [x] 1. Fixed Stage 0 versus Stage 1 autocomplete comparison
-- [ ] 2. Train Stage 1 GEC from the Stage 1 LM checkpoint
-- [ ] 3. Evaluate Stage 1 GEC
-- [ ] 4. Repair synthetic GEC data, alignment, decoding, and resume behavior
-- [ ] 5. Retrain and reevaluate Stage 1 GEC
-- [ ] 6. Decide whether export and desktop integration are justified
+- [x] 2. Train Stage 1 GEC from the Stage 1 LM checkpoint
+- [x] 3. Evaluate Stage 1 GEC (smoke 16-case test)
+- [x] 4. Repair synthetic GEC data (whitespace, alignment, confidence decoding)
+- [x] 5. Retrain and reevaluate Stage 1 GEC (diagnosed over-conservatism)
+- [x] 6. Construct 200-case held-out development suite and establish baseline
+- [x] 7. Generate balanced GEC v2 corpus (sentence units <=384 chars, targeted corruptions)
+- [x] 8. Run loss-weight ablation experiments (`keep_downweight` tuning)
+- [ ] 9. Train winning configuration to convergence
+- [ ] 10. Decide whether export and desktop integration are justified
 
 ## Step 1: Fixed autocomplete comparison
 
@@ -345,3 +349,135 @@ verify source/target alignment on that set, and tune the edit objective and
 decoding against correction precision and F0.5. Resume behavior for the
 streaming LM dataset also remains a separate engineering item; it has not
 been claimed as fixed here.
+
+## Step 6: 200-Case Held-Out Development Suite & Evaluation
+
+To eliminate small-sample noise from the initial 16-case smoke test, a deterministic 200-case held-out development suite was constructed at `data/eval/gec_dev.jsonl` using `scripts/build_gec_dev.py`.
+
+The suite is stratified as:
+- 120 clean safety cases (must remain completely unchanged)
+- 30 common typo cases (e.g. `teh` -> `the`, `recieve` -> `receive`, `seperate` -> `separate`)
+- 30 grammar cases (subject-verb agreement, verb forms, articles)
+- 20 mechanics cases (capitalization, apostrophes)
+
+Evaluation command:
+
+```powershell
+.\.venv\Scripts\python.exe scripts/evaluate_gec.py `
+  --stage0 checkpoints/gec_stage0 `
+  --stage1 checkpoints/gec_stage1_repaired `
+  --cases data/eval/gec_dev.jsonl `
+  --device cuda
+```
+
+Measured results on the 200-case held-out set:
+
+```text
+MODEL checkpoints/gec_stage0
+  exact_match_all=57/200 (0.285)
+  error_recovery=1/80 (0.013)
+  typo_recovery=0/30 (0.000)
+  clean_unchanged=56/120 (0.467)
+  clean_false_edits=64/120 (0.533)
+  error_changed=53/80 (0.662)
+  edit_precision=0.000
+  edit_recall=0.000
+  edit_f0.5=0.000
+  mean_latency_ms=15.25
+  peak_cuda_memory_mb=106.0
+
+MODEL checkpoints/gec_stage1_repaired
+  exact_match_all=99/200 (0.495)
+  error_recovery=1/80 (0.013)
+  typo_recovery=0/30 (0.000)
+  clean_unchanged=98/120 (0.817)
+  clean_false_edits=22/120 (0.183)
+  error_changed=27/80 (0.338)
+  edit_precision=0.000
+  edit_recall=0.000
+  edit_f0.5=0.000
+  mean_latency_ms=17.09
+  peak_cuda_memory_mb=161.7
+```
+
+Diagnosis:
+`gec_stage1_repaired` improved clean safety from 46.7% to 81.7%, but true error recovery remained stagnant at 1.3% (0/30 on typos). The model essentially collapsed to a conservative near-identity operator.
+
+## Step 7: Corpus Diagnosis and Balanced GEC Corpus Generation (v2)
+
+Inspection of `data/processed/gec/repaired/train.jsonl` revealed two root causes:
+1. **Window truncation mismatch**: Training rows had a mean length of 220.7 tokens (median 190 tokens). With a 128-token training context window, errors frequently occurred beyond token 128 and were completely truncated from training.
+2. **Label imbalance**: 99.29% of all tokens carried the label `0` (KEEP), with only 0.71% active edit labels. Combined with `keep_downweight=1.0`, the cross-entropy objective rewarded the model for predicting KEEP universally.
+
+Fixes implemented in `src/typotaker/data/prepare.py` and `src/typotaker/data/errors.py`:
+- Added `split_gec_units` to segment source text into sentence units $\le 384$ characters (~70-80 tokens).
+- Integrated `COMMON_TYPOS`, `GRAMMAR_PATTERNS`, case matching, and apostrophe handling.
+- Generated `data/processed/gec/v2/train.jsonl` using:
+
+```powershell
+.\.venv\Scripts\python.exe -m typotaker.cli inject-gec `
+  --clean data/processed/gec/clean_subset.jsonl `
+  --out data/processed/gec/v2/train.jsonl `
+  --corruption-prob 0.85 `
+  --min-ops 1 `
+  --max-ops 2 `
+  --max-unit-chars 384
+```
+
+Comparative Dataset Statistics (`scripts/inspect_gec_data.py`):
+
+| Metric | Old Repaired (`repaired/train.jsonl`) | New Balanced (`v2/train.jsonl`) | Change |
+|---|---|---|---|
+| Total Units / Rows | 50,000 | **145,918** | +191.8% (2.9x) |
+| Mean Tokens / Row | 220.7 (median: 190) | **74.8 (median: 82)** | Fits within 128 window |
+| Clean Identity Rows | 18,615 (37.23%) | **22,773 (15.61%)** | Preserves identity balance |
+| Total Tokens | 11,036,698 | **10,917,427** | Equivalent token volume |
+| KEEP Labels (0) | 10,958,025 (99.29%) | **10,633,201 (97.40%)** | Reduced dominant class |
+| Non-KEEP Edit Labels | 78,673 (0.71%) | **284,226 (2.60%)** | **3.6x increase in edit signal** |
+| REPLACE Labels | 32,740 (0.30%) | **131,289 (1.20%)** | **4.0x increase** |
+| CASE_CAP Labels | 1,623 | **23,554** | **14.5x increase** |
+| APPEND Labels | 11,433 (0.10%) | **29,759 (0.27%)** | **2.6x increase** |
+| DELETE Labels | 32,870 (0.30%) | **99,624 (0.91%)** | Controlled deletions |
+
+## Step 8: Loss-Weighting Ablation Experiments (`keep_downweight`)
+
+To determine the optimal tradeoff between clean text preservation and correction recall, three ablation models were trained from `checkpoints/lm_stage1` for 2,500 steps using `data/processed/gec/v2/train.jsonl` with `micro_batch_size: 96` (achieving 80%–91% GPU utilization on the RTX 5070):
+
+- **Ablation A**: `keep_downweight: 0.4`
+- **Ablation B**: `keep_downweight: 0.2`
+- **Ablation C**: `keep_downweight: 0.1`
+
+Evaluation on the 200-case held-out suite (`data/eval/gec_dev.jsonl`) using `data/processed/gec/v2/edit_maps.json`:
+
+| Model / Checkpoint | `keep_downweight` | Clean Unchanged | Clean False Edits | Typo Recovery | Overall Error Recovery | Edit Precision | Edit Recall | Edit F0.5 |
+|---|---|---|---|---|---|---|---|---|
+| **Old Baseline (`gec_stage1_repaired`)** | `1.0` | 81.7% (98/120) | 18.3% (22/120) | 0.0% (0/30) | 1.3% (1/80) | 0.000 | 0.000 | 0.000 |
+| **Ablation A (`ablation_a_04`)** | `0.4` | **85.0% (102/120)** | **15.0% (18/120)** | 10.0% (3/30) | 10.0% (8/80) | 0.149 | 0.089 | 0.131 |
+| **Ablation B (`ablation_b_02`)** | `0.2` | 81.7% (98/120) | 18.3% (22/120) | 10.0% (3/30) | **12.5% (10/80)** | **0.204** | **0.127** | **0.182** |
+| **Ablation C (`ablation_c_01`)** | `0.1` | 69.2% (83/120) | 30.8% (37/120) | **13.3% (4/30)** | 12.5% (10/80) | 0.169 | 0.127 | 0.159 |
+
+Confidence-Gated Decoding on Ablation B (`--min-edit-prob 0.60 --edit-margin 0.10`):
+
+```text
+MODEL checkpoints/gec_stage1_ablation_b_02 (Gated)
+  exact_match_all=118/200 (0.590)
+  error_recovery=5/80 (0.062)
+  typo_recovery=3/30 (0.100)
+  clean_unchanged=113/120 (0.942)
+  clean_false_edits=7/120 (0.058)
+  error_changed=32/80 (0.400)
+  edit_precision=0.114
+  edit_recall=0.051
+  edit_f0.5=0.091
+  mean_latency_ms=22.58
+  peak_cuda_memory_mb=161.6
+```
+
+### Findings and Selection:
+1. **The 0% Typo Barrier is Broken**: All three ablations successfully correct common typos (e.g. `This is teh final document.` -> `This is the final document.`), unlike the old baseline which produced 0% typo fixes.
+2. **Winner: Ablation B (`keep_downweight: 0.2`)**:
+   - Highest raw Edit Precision (`0.204`) and Edit F0.5 (`0.182`).
+   - Highest overall Error Recovery (`12.5%`) with strong Mechanics correction (`35.0%`).
+   - When combined with confidence thresholds (`--min-edit-prob 0.60`), clean sentence preservation reaches **94.2%** while retaining typo fixes.
+   - In contrast, Ablation C (`0.1`) was overly aggressive, dropping clean preservation to 69.2%. Ablation A (`0.4`) was too conservative (F0.5 = 0.131).
+
