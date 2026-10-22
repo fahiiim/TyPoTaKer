@@ -126,7 +126,7 @@ public sealed class TyPoInferenceEngine : IDisposable
             .ToList();
     }
 
-    public CorrectionResult CorrectSentence(string text, float minEditProb = 0.85f, float editMargin = 0.10f)
+    public CorrectionResult CorrectSentence(string text, float minEditProb = 0.65f, float editMargin = 0.08f)
     {
         if (string.IsNullOrWhiteSpace(text))
         {
@@ -207,13 +207,41 @@ public sealed class TyPoInferenceEngine : IDisposable
             }
 
             int targetToken = tid;
-            if (bestLabel >= 4 && _idToReplace.TryGetValue(bestLabel, out int repId))
+            if (bestLabel == 2) // CASE_CAP
+            {
+                string dec = _tokenizer.Decode(new[] { tid });
+                if (dec.Length > 0)
+                {
+                    string cap = char.ToUpperInvariant(dec[0]) + (dec.Length > 1 ? dec.Substring(1) : "");
+                    var (recIds, _) = _tokenizer.Encode(cap, addBos: false, addEos: false);
+                    if (recIds.Count > 0) targetToken = (int)recIds[0];
+                }
+                edits.Add((_tokenizer.Decode(new[] { tid }), _tokenizer.Decode(new[] { targetToken }), bestProb));
+            }
+            else if (bestLabel == 3) // CASE_LOWER
+            {
+                string dec = _tokenizer.Decode(new[] { tid });
+                if (dec.Length > 0)
+                {
+                    string lower = dec.ToLowerInvariant();
+                    var (recIds, _) = _tokenizer.Encode(lower, addBos: false, addEos: false);
+                    if (recIds.Count > 0) targetToken = (int)recIds[0];
+                }
+                edits.Add((_tokenizer.Decode(new[] { tid }), _tokenizer.Decode(new[] { targetToken }), bestProb));
+            }
+            else if (bestLabel >= 4 && _idToReplace.TryGetValue(bestLabel, out int repId))
             {
                 targetToken = repId;
                 edits.Add((_tokenizer.Decode(new[] { tid }), _tokenizer.Decode(new[] { repId }), bestProb));
             }
 
             finalIds.Add(targetToken);
+
+            if (bestLabel >= 4 && _idToAppend.TryGetValue(bestLabel, out int appId))
+            {
+                finalIds.Add(appId);
+                edits.Add((string.Empty, _tokenizer.Decode(new[] { appId }), bestProb));
+            }
         }
 
         string corrected = _tokenizer.Decode(finalIds).Trim();

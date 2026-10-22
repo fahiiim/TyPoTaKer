@@ -1,8 +1,10 @@
 using System;
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Threading;
 using Point = System.Windows.Point;
 using Brush = System.Windows.Media.Brush;
 
@@ -20,6 +22,10 @@ public partial class CaretOverlayWindow : Window
     [DllImport("user32.dll", SetLastError = true)]
     private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
 
+    private readonly DispatcherTimer _autoHideTimer;
+
+    public event EventHandler? DismissClicked;
+
     public string CurrentInsertion { get; private set; } = string.Empty;
     public int CurrentBackspaces { get; private set; } = 0;
     public bool HasActiveSuggestion { get; private set; } = false;
@@ -27,6 +33,13 @@ public partial class CaretOverlayWindow : Window
     public CaretOverlayWindow()
     {
         InitializeComponent();
+        _autoHideTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+        _autoHideTimer.Tick += (s, e) =>
+        {
+            _autoHideTimer.Stop();
+            HideOverlay();
+        };
+
         Loaded += (s, e) => Hide();
     }
 
@@ -78,15 +91,19 @@ public partial class CaretOverlayWindow : Window
             double screenW = SystemParameters.PrimaryScreenWidth;
             double screenH = SystemParameters.PrimaryScreenHeight;
 
-            if (targetX + 220 > screenW)
-                targetX = Math.Max(10, screenW - 240);
+            if (targetX + 280 > screenW)
+                targetX = Math.Max(10, screenW - 300);
             if (targetY + 60 > screenH)
-                targetY = Math.Max(10, caretScreenPos.Y - 45); // Flip above caret if bottom of screen
+                targetY = Math.Max(10, caretScreenPos.Y - 45); // Flip above caret if near bottom of screen
 
             Left = Math.Max(10, targetX);
             Top = Math.Max(10, targetY);
 
             Show();
+
+            // Restart 5-second auto-dismiss timer
+            _autoHideTimer.Stop();
+            _autoHideTimer.Start();
         });
     }
 
@@ -94,10 +111,17 @@ public partial class CaretOverlayWindow : Window
     {
         Dispatcher.Invoke(() =>
         {
+            _autoHideTimer.Stop();
             HasActiveSuggestion = false;
             CurrentInsertion = string.Empty;
             CurrentBackspaces = 0;
             Hide();
         });
+    }
+
+    private void OnDismissClick(object sender, MouseButtonEventArgs e)
+    {
+        HideOverlay();
+        DismissClicked?.Invoke(this, EventArgs.Empty);
     }
 }

@@ -30,6 +30,7 @@ public sealed class KeyboardHook : IDisposable
     public event EventHandler? DismissRequested;
 
     public bool IsEnabled { get; set; } = true;
+    public bool IsDismissed { get; set; } = false;
 
     public KeyboardHook()
     {
@@ -93,15 +94,24 @@ public sealed class KeyboardHook : IDisposable
                 // 2. Dismiss Hotkey: Escape
                 if (vk == Win32Native.VK_ESCAPE)
                 {
+                    IsDismissed = true;
                     DismissRequested?.Invoke(this, EventArgs.Empty);
+                    return Win32Native.CallNextHookEx(_hookId, nCode, wParam, lParam);
                 }
                 else if (vk == Win32Native.VK_RETURN)
                 {
-                    ClearBuffer();
-                    DismissRequested?.Invoke(this, EventArgs.Empty);
+                    IsDismissed = false;
+                    lock (_lock)
+                    {
+                        _buffer.Append('\n');
+                        if (_buffer.Length > 250)
+                            _buffer.Remove(0, _buffer.Length - 250);
+                    }
+                    TypingActivity?.Invoke(this, new TypingEventArgs(GetBuffer(), '\n'));
                 }
                 else if (vk == Win32Native.VK_BACK)
                 {
+                    IsDismissed = false;
                     lock (_lock)
                     {
                         if (_buffer.Length > 0)
@@ -114,6 +124,7 @@ public sealed class KeyboardHook : IDisposable
                     char? c = TranslateVkToChar(vk, kbd.scanCode);
                     if (c.HasValue && !char.IsControl(c.Value))
                     {
+                        IsDismissed = false;
                         lock (_lock)
                         {
                             _buffer.Append(c.Value);

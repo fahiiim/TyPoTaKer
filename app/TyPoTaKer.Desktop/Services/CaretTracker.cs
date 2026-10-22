@@ -1,8 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
-using System.Windows;
 using System.Windows.Automation;
-using System.Windows.Automation.Text;
 using Point = System.Windows.Point;
 
 namespace TyPoTaKer.Desktop.Services;
@@ -20,12 +18,19 @@ public static class CaretTracker
 {
     public static CaretInfo GetCaretInfo()
     {
+        // 1. Ultra-fast path (<0.05 ms): Win32 GetGUIThreadInfo
+        var win32Info = GetWin32CaretInfo();
+        if (win32Info.IsVisible)
+        {
+            return win32Info;
+        }
+
+        // 2. Fallback path for modern apps (WPF, Chromium, Word): UI Automation bounds only
         try
         {
             var focused = AutomationElement.FocusedElement;
             if (focused != null)
             {
-                // 1. Password field safety check
                 object isPasswordObj = focused.GetCurrentPropertyValue(AutomationElement.IsPasswordProperty, true);
                 if (isPasswordObj is bool isPassword && isPassword)
                 {
@@ -37,7 +42,6 @@ public static class CaretTracker
                     };
                 }
 
-                // 2. Try UI Automation TextPattern
                 if (focused.TryGetCurrentPattern(TextPattern.Pattern, out object patternObj) &&
                     patternObj is TextPattern textPattern)
                 {
@@ -48,26 +52,12 @@ public static class CaretTracker
                         if (rects != null && rects.Length > 0 && rects[0].Width >= 0)
                         {
                             var r = rects[0];
-                            string text = string.Empty;
-                            try
-                            {
-                                // Get surrounding document text before caret (up to ~300 chars)
-                                var docRange = textPattern.DocumentRange.Clone();
-                                docRange.MoveEndpointByRange(TextPatternRangeEndpoint.End, selection[0], TextPatternRangeEndpoint.Start);
-                                string fullBefore = docRange.GetText(-1);
-                                text = fullBefore.Length > 300 ? fullBefore.Substring(fullBefore.Length - 300) : fullBefore;
-                            }
-                            catch
-                            {
-                                // fallback if document range move fails
-                            }
-
                             return new CaretInfo
                             {
                                 IsVisible = true,
                                 ScreenPosition = new Point(r.Left, r.Bottom),
                                 CaretHeight = Math.Max(16, r.Height),
-                                SurroundingText = text,
+                                SurroundingText = null, // Use fast keyboard hook buffer
                                 IsPassword = false
                             };
                         }
@@ -77,11 +67,10 @@ public static class CaretTracker
         }
         catch
         {
-            // UI Automation may throw COMException if app is unresponsive
+            // COM exceptions when switching windows
         }
 
-        // 3. Fallback: Win32 GetGUIThreadInfo
-        return GetWin32CaretInfo();
+        return win32Info;
     }
 
     private static CaretInfo GetWin32CaretInfo()
@@ -112,7 +101,7 @@ public static class CaretTracker
                 IsVisible = true,
                 ScreenPosition = new Point(pt.X, pt.Y),
                 CaretHeight = height,
-                SurroundingText = null, // Will use keyboard buffer fallback
+                SurroundingText = null,
                 IsPassword = false
             };
         }

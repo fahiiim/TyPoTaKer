@@ -1,6 +1,8 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Timers;
 using System.Windows;
 using TyPoTaKer.Desktop.Engine;
@@ -16,6 +18,7 @@ public partial class App : System.Windows.Application
     private KeyboardHook? _hook;
     private TrayManager? _tray;
     private System.Timers.Timer? _debounceTimer;
+    private CancellationTokenSource? _inferenceCts;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -35,18 +38,24 @@ public partial class App : System.Windows.Application
             _hook = new KeyboardHook();
             _tray = new TrayManager();
 
-            // Setup 130ms typing debouncer
-            _debounceTimer = new System.Timers.Timer(130) { AutoReset = false };
+            // 60ms fast typing debouncer for snappy response
+            _debounceTimer = new System.Timers.Timer(60) { AutoReset = false };
             _debounceTimer.Elapsed += OnDebounceElapsed;
 
             _hook.TypingActivity += (s, args) =>
             {
+                _hook.IsDismissed = false;
                 _debounceTimer.Stop();
                 _debounceTimer.Start();
             };
 
             _hook.AcceptRequested += OnAcceptRequested;
             _hook.DismissRequested += (s, args) => _overlay.HideOverlay();
+            _overlay.DismissClicked += (s, args) =>
+            {
+                if (_hook != null) _hook.IsDismissed = true;
+                _overlay.HideOverlay();
+            };
 
             _tray.EnabledToggled += (s, enabled) =>
             {
@@ -87,59 +96,92 @@ public partial class App : System.Windows.Application
 
     private void OnDebounceElapsed(object? sender, ElapsedEventArgs e)
     {
-        if (_engine == null || _overlay == null || _hook == null || !_hook.IsEnabled)
+        if (_engine == null || _overlay == null || _hook == null || !_hook.IsEnabled || _hook.IsDismissed)
+        {
+            Dispatcher.Invoke(() => _overlay?.HideOverlay());
+            return;
+        }
+
+        _inferenceCts?.Cancel();
+        var cts = new CancellationTokenSource();
+        _inferenceCts = cts;
+        var ct = cts.Token;
+
+        Task.Run(() => ProcessSuggestionsAsync(ct), ct);
+    }
+
+    private void ProcessSuggestionsAsync(CancellationToken ct)
+    {
+        if (ct.IsCancellationRequested || _engine == null || _overlay == null || _hook == null)
             return;
 
         var caret = CaretTracker.GetCaretInfo();
         if (!caret.IsVisible || caret.IsPassword)
         {
-            _overlay.HideOverlay();
+            Dispatcher.Invoke(() => _overlay?.HideOverlay());
             return;
         }
 
         string rawText = caret.SurroundingText ?? _hook.GetBuffer();
         if (string.IsNullOrWhiteSpace(rawText) || rawText.Trim().Length < 2)
         {
-            _overlay.HideOverlay();
+            Dispatcher.Invoke(() => _overlay?.HideOverlay());
             return;
         }
 
-        string text = rawText.Trim();
+        // Extract active sentence / line context
+        string activeSentence = ExtractActiveSentence(rawText);
+        if (string.IsNullOrWhiteSpace(activeSentence) || activeSentence.Length < 2)
+        {
+            Dispatcher.Invoke(() => _overlay?.HideOverlay());
+            return;
+        }
 
-        // 1. Check GEC for typos on recent sentence/phrase
-        var gecResult = _engine.CorrectSentence(text);
+        if (ct.IsCancellationRequested) return;
+
+        // 1. High-Priority: Check GEC grammar and typo corrections on the active sentence/phrase
+        var gecResult = _engine.CorrectSentence(activeSentence, minEditProb: 0.60f, editMargin: 0.08f);
         if (gecResult.HasCorrection && gecResult.Edits.Count > 0)
         {
-            var lastEdit = gecResult.Edits.Last();
-            string orig = lastEdit.Original.Trim();
-            string repl = lastEdit.Replacement.Trim();
+            if (ct.IsCancellationRequested) return;
 
-            // Calculate backspaces needed for the mistyped token
-            int backspaces = orig.Length;
-            string displayLabel = $"{orig} → {repl}";
+            string displayLabel;
+            if (gecResult.Edits.Count == 1)
+            {
+                var edit = gecResult.Edits[0];
+                string orig = string.IsNullOrEmpty(edit.Original) ? "..." : edit.Original.Trim();
+                string repl = string.IsNullOrEmpty(edit.Replacement) ? "..." : edit.Replacement.Trim();
+                displayLabel = $"{orig} → {repl}";
+            }
+            else
+            {
+                displayLabel = $"Fix line: {gecResult.CorrectedText}";
+            }
 
             _overlay.ShowSuggestion(
                 caretScreenPos: caret.ScreenPosition,
                 caretHeight: caret.CaretHeight,
                 displayLabel: displayLabel,
-                insertionText: repl,
+                insertionText: gecResult.CorrectedText,
                 isCorrection: true,
-                backspaces: backspaces
+                backspaces: activeSentence.Length
             );
             return;
         }
 
-        // 2. Check LM next-word autocomplete
-        var suggestions = _engine.GetAutocomplete(text, topK: 1);
-        if (suggestions.Count > 0 && suggestions[0].Probability >= 0.10f)
-        {
-            var best = suggestions[0];
-            string displayLabel = best.Text;
+        if (ct.IsCancellationRequested) return;
 
+        // 2. Second-Priority: Contextual autocomplete suggestions on the active text
+        var suggestions = _engine.GetAutocomplete(activeSentence, topK: 1);
+        if (suggestions.Count > 0 && suggestions[0].Probability >= 0.08f)
+        {
+            if (ct.IsCancellationRequested) return;
+
+            var best = suggestions[0];
             _overlay.ShowSuggestion(
                 caretScreenPos: caret.ScreenPosition,
                 caretHeight: caret.CaretHeight,
-                displayLabel: displayLabel,
+                displayLabel: best.Text,
                 insertionText: best.Text,
                 isCorrection: false,
                 backspaces: 0
@@ -147,7 +189,42 @@ public partial class App : System.Windows.Application
             return;
         }
 
-        _overlay.HideOverlay();
+        Dispatcher.Invoke(() => _overlay?.HideOverlay());
+    }
+
+    /// <summary>
+    /// Extracts the current sentence or line being typed from the end of the text.
+    /// </summary>
+    private static string ExtractActiveSentence(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return string.Empty;
+
+        // Look back for sentence boundaries: newline or period/exclamation/question followed by space
+        int lastBreak = -1;
+        for (int i = text.Length - 1; i >= 0; i--)
+        {
+            char c = text[i];
+            if (c == '\n' || c == '\r')
+            {
+                lastBreak = i;
+                break;
+            }
+            if ((c == '.' || c == '!' || c == '?') && i < text.Length - 1 && text[i + 1] == ' ')
+            {
+                lastBreak = i + 1;
+                break;
+            }
+        }
+
+        string slice = (lastBreak >= 0 && lastBreak < text.Length)
+            ? text.Substring(lastBreak + 1)
+            : text;
+
+        // Cap to last 160 characters so we stay well within model window
+        if (slice.Length > 160)
+            slice = slice.Substring(slice.Length - 160);
+
+        return slice;
     }
 
     private void OnAcceptRequested(object? sender, EventArgs e)
@@ -166,6 +243,8 @@ public partial class App : System.Windows.Application
     protected override void OnExit(ExitEventArgs e)
     {
         _debounceTimer?.Dispose();
+        _inferenceCts?.Cancel();
+        _inferenceCts?.Dispose();
         _hook?.Dispose();
         _tray?.Dispose();
         _engine?.Dispose();
