@@ -90,9 +90,12 @@ def cmd_grow(args: argparse.Namespace) -> None:
 
 
 def cmd_export(args: argparse.Namespace) -> None:
-    from typotaker.export import export_onnx
+    from typotaker.export import export_onnx, quantize_onnx
 
-    export_onnx(args.run, args.out, task=args.task, seq_len=args.seq_len)
+    exported = export_onnx(args.run, args.out, task=args.task, seq_len=args.seq_len)
+    if getattr(args, "quantize", False):
+        quantize_onnx(exported, getattr(args, "quantize_out", None))
+
 
 
 def cmd_suggest(args: argparse.Namespace) -> None:
@@ -176,7 +179,10 @@ def main() -> None:
     s.add_argument("--out", default="export/model.onnx")
     s.add_argument("--task", choices=["lm", "gec"], default="lm")
     s.add_argument("--seq-len", type=int, default=128)
+    s.add_argument("--quantize", action="store_true", help="Quantize exported ONNX model to INT8")
+    s.add_argument("--quantize-out", help="Optional output path for INT8 quantized model")
     s.set_defaults(func=cmd_export)
+
 
     s = sub.add_parser("suggest")
     s.add_argument("--run", required=True)
