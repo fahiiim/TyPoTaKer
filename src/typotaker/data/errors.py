@@ -9,6 +9,7 @@ CONFUSIONS = [
     ("their", "there"),
     ("there", "their"),
     ("they're", "their"),
+    ("their", "they're"),
     ("its", "it's"),
     ("it's", "its"),
     ("your", "you're"),
@@ -20,25 +21,67 @@ CONFUSIONS = [
     ("to", "too"),
     ("too", "to"),
     ("lose", "loose"),
+    ("loose", "lose"),
     ("a", "an"),
     ("an", "a"),
+    ("just", "gust"),
+    ("gust", "just"),
+    ("hear", "here"),
+    ("here", "hear"),
+    ("buy", "by"),
+    ("by", "buy"),
+    ("right", "write"),
+    ("write", "right"),
+    ("weather", "whether"),
+    ("whether", "weather"),
+    ("piece", "peace"),
+    ("peace", "piece"),
+    ("would", "wood"),
+    ("know", "no"),
+    ("no", "know"),
+    ("were", "where"),
+    ("where", "were"),
 ]
-PREP = ["in", "on", "at", "to", "for", "from", "with", "by"]
+PREP = ["in", "on", "at", "to", "for", "from", "with", "by", "of", "about"]
 ARTICLES = {"a", "an", "the"}
 KB_NEIGHBORS = {
-    "a": "sqwsz",
+    "a": "qwsz",
+    "b": "vghn",
+    "c": "xdfv",
+    "d": "serfcx",
     "e": "wsdr",
+    "f": "drtgvc",
+    "g": "ftyhbvj",
+    "h": "gyujnb",
     "i": "ujko",
+    "j": "huikmng",
+    "k": "jiolm",
+    "l": "kop",
+    "m": "njk",
+    "n": "bhjm",
     "o": "iklp",
+    "p": "ol",
+    "q": "wa",
+    "r": "edft",
     "s": "awedxz",
     "t": "rfgy",
-    "n": "bhjm",
+    "u": "yhj",
+    "v": "cfgb",
+    "w": "qase",
+    "x": "zsdc",
+    "y": "tghu",
+    "z": "asx",
 }
 
 # Correct -> intentionally corrupted. These cover frequent keyboard/spelling
 # mistakes that are useful for a desktop typing assistant.
 COMMON_TYPOS = [
     ("the", "teh"),
+    ("and", "adn"),
+    ("just", "gust"),
+    ("pain", "pai"),
+    ("work", "wrok"),
+    ("this", "thsi"),
     ("receive", "recieve"),
     ("separate", "seperate"),
     ("address", "adress"),
@@ -58,6 +101,8 @@ COMMON_TYPOS = [
     ("immediately", "imediately"),
     ("decision", "descision"),
     ("knowledge", "knowlege"),
+    ("wanna", "wana"),
+    ("gonna", "gona"),
 ]
 
 # Clean token sequences -> common grammar errors. We only apply transformations
@@ -82,15 +127,21 @@ GRAMMAR_PATTERNS = [
 def _typo_word(word: str, rng: random.Random) -> str:
     if len(word) < 3 or not word.isalpha():
         return word
-    op = rng.choice(["swap", "drop", "dup", "neighbor"])
-    i = rng.randrange(len(word) - 1)
+    op = rng.choice(["swap", "drop", "dup", "neighbor", "trunc"])
+    i = rng.randrange(len(word))
     chars = list(word)
     if op == "swap":
-        chars[i], chars[i + 1] = chars[i + 1], chars[i]
+        if i < len(word) - 1:
+            chars[i], chars[i + 1] = chars[i + 1], chars[i]
+        elif len(chars) >= 2:
+            chars[-1], chars[-2] = chars[-2], chars[-1]
     elif op == "drop":
         del chars[i]
     elif op == "dup":
         chars.insert(i, chars[i])
+    elif op == "trunc":
+        if len(chars) >= 4:
+            chars = chars[:-1]
     else:
         ch = chars[i].lower()
         nbrs = KB_NEIGHBORS.get(ch, "aeiou")

@@ -1,0 +1,32 @@
+task: gec
+run_name: gec_stage2
+model: configs/model/stage2_85m.yaml
+init_from: checkpoints/lm_stage2
+data:
+  train_paths:
+    - data/processed/gec/v3/train.jsonl
+  tokenizer_path: data/tokenizer/tokenizer.json
+  seq_len: 128
+  pack_sequences: false
+optim:
+  lr: 0.00015
+  weight_decay: 0.05
+  betas: [0.9, 0.95]
+  warmup_steps: 300
+  max_steps: 8000
+  grad_clip: 1.0
+train:
+  micro_batch_size: 96
+  grad_accum: 1
+  amp_dtype: bf16
+  compile: true
+  compile_mode: default
+  seed: 42
+  max_hours: 2.0
+  log_every: 25
+  save_every_steps: 1000
+  keep_last: 3
+  checkpoint_dir: checkpoints
+  resume: auto
+  num_workers: 0
+  keep_downweight: 0.2

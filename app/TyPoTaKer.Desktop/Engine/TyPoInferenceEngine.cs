@@ -247,6 +247,15 @@ public sealed class TyPoInferenceEngine : IDisposable
         string corrected = _tokenizer.Decode(finalIds).Trim();
         bool hasCorrection = edits.Count > 0 && !string.Equals(corrected, text.Trim(), StringComparison.Ordinal);
 
+        if (!hasCorrection)
+        {
+            var hybridRescore = TryRescoreWithQwertyLm(text);
+            if (hybridRescore != null)
+            {
+                return hybridRescore;
+            }
+        }
+
         return new CorrectionResult
         {
             HasCorrection = hasCorrection,
@@ -254,6 +263,223 @@ public sealed class TyPoInferenceEngine : IDisposable
             CorrectedText = corrected,
             Edits = edits
         };
+    }
+
+    private static readonly Dictionary<char, string> QwertyNeighbors = new()
+    {
+        ['a'] = "qwsz",
+        ['b'] = "vghn",
+        ['c'] = "xdfv",
+        ['d'] = "serfcx",
+        ['e'] = "wsdr",
+        ['f'] = "drtgvc",
+        ['g'] = "ftyhbvj",
+        ['h'] = "gyujnb",
+        ['i'] = "ujko",
+        ['j'] = "huikmng",
+        ['k'] = "jiolm",
+        ['l'] = "kop",
+        ['m'] = "njk",
+        ['n'] = "bhjm",
+        ['o'] = "iklp",
+        ['p'] = "ol",
+        ['q'] = "wa",
+        ['r'] = "edft",
+        ['s'] = "awedxz",
+        ['t'] = "rfgy",
+        ['u'] = "yhj",
+        ['v'] = "cfgb",
+        ['w'] = "qase",
+        ['x'] = "zsdc",
+        ['y'] = "tghu",
+        ['z'] = "asx"
+    };
+
+    public static HashSet<string> GenerateCandidates(string word)
+    {
+        var cands = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        string w = word.ToLowerInvariant();
+        if (w.Length == 0) return cands;
+
+        // 1. QWERTY neighbor substitution
+        for (int i = 0; i < w.Length; i++)
+        {
+            char c = w[i];
+            if (QwertyNeighbors.TryGetValue(c, out string? neighbors))
+            {
+                foreach (char n in neighbors)
+                {
+                    cands.Add(w.Substring(0, i) + n + w.Substring(i + 1));
+                }
+            }
+        }
+
+        // 2. Adjacent transposition
+        for (int i = 0; i < w.Length - 1; i++)
+        {
+            char[] arr = w.ToCharArray();
+            char tmp = arr[i];
+            arr[i] = arr[i + 1];
+            arr[i + 1] = tmp;
+            cands.Add(new string(arr));
+        }
+
+        // 3. 1-character deletion
+        for (int i = 0; i < w.Length; i++)
+        {
+            cands.Add(w.Substring(0, i) + w.Substring(i + 1));
+        }
+
+        // 4. Common suffixes for incomplete words
+        string[] suffixes = { "n", "ing", "ed", "s", "e", "d", "t" };
+        foreach (var s in suffixes)
+        {
+            cands.Add(w + s);
+        }
+
+        cands.Remove(w);
+        return cands;
+    }
+
+    public float CalculateSentenceNll(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return 999f;
+        var (tokenIds, tokenPieces) = _tokenizer.Encode(text, addBos: true, addEos: true);
+        int seqLen = tokenIds.Count;
+        if (seqLen < 2) return 999f;
+
+        var charArray = _tokenizer.BuildCharTensor(tokenPieces);
+        var charTensor = new DenseTensor<long>(new[] { 1, seqLen - 1, _tokenizer.MaxCharsPerToken });
+        for (int t = 0; t < seqLen - 1; t++)
+        {
+            for (int c = 0; c < _tokenizer.MaxCharsPerToken; c++)
+                charTensor[0, t, c] = charArray[0, t, c];
+        }
+
+        var tokSub = tokenIds.Take(seqLen - 1).ToArray();
+        var tokTensor = new DenseTensor<long>(tokSub, new[] { 1, seqLen - 1 });
+
+        var inputs = new List<NamedOnnxValue>
+        {
+            NamedOnnxValue.CreateFromTensor("token_ids", tokTensor),
+            NamedOnnxValue.CreateFromTensor("char_ids", charTensor)
+        };
+
+        using var results = _lmSession.Run(inputs);
+        var logits = results.First(r => r.Name == "logits").AsTensor<float>();
+
+        int vocabSize = logits.Dimensions[2];
+        float totalNll = 0f;
+
+        for (int t = 0; t < seqLen - 1; t++)
+        {
+            float maxLogit = float.MinValue;
+            for (int v = 0; v < vocabSize; v++)
+            {
+                float val = logits[0, t, v];
+                if (val > maxLogit) maxLogit = val;
+            }
+
+            float sumExp = 0f;
+            for (int v = 0; v < vocabSize; v++)
+            {
+                sumExp += MathF.Exp(logits[0, t, v] - maxLogit);
+            }
+
+            int targetToken = (int)tokenIds[t + 1];
+            float targetLogit = logits[0, t, targetToken];
+            float targetProb = MathF.Exp(targetLogit - maxLogit) / sumExp;
+
+            totalNll -= MathF.Log(Math.Max(targetProb, 1e-9f));
+        }
+
+        return totalNll;
+    }
+
+    private CorrectionResult? TryRescoreWithQwertyLm(string text)
+    {
+        string[] rawTokens = text.Split(' ');
+        if (rawTokens.Length == 0) return null;
+
+        float baseNll = CalculateSentenceNll(text);
+        float bestNll = baseNll;
+        int bestIdx = -1;
+        string? bestOrig = null;
+        string? bestReplacement = null;
+
+        for (int i = 0; i < rawTokens.Length; i++)
+        {
+            string raw = rawTokens[i];
+            string clean = raw.Trim(".,!?:;\"'()[]{}".ToCharArray());
+            if (clean.Length < 2) continue;
+
+            var candidates = GenerateCandidates(clean);
+            foreach (var cand in candidates)
+            {
+                if (string.Equals(cand, clean, StringComparison.OrdinalIgnoreCase)) continue;
+
+                // Match original casing
+                string casedCand = char.IsUpper(clean[0])
+                    ? char.ToUpperInvariant(cand[0]) + (cand.Length > 1 ? cand.Substring(1) : "")
+                    : cand;
+
+                int startPunct = 0;
+                while (startPunct < raw.Length && char.IsPunctuation(raw[startPunct])) startPunct++;
+                string leading = startPunct > 0 ? raw.Substring(0, startPunct) : "";
+
+                int endPunct = raw.Length - 1;
+                while (endPunct >= startPunct && char.IsPunctuation(raw[endPunct])) endPunct--;
+                string trailing = (endPunct < raw.Length - 1) ? raw.Substring(endPunct + 1) : "";
+
+                string replacementToken = leading + casedCand + trailing;
+
+                string[] candidateTokens = (string[])rawTokens.Clone();
+                candidateTokens[i] = replacementToken;
+                string candidateSentence = string.Join(" ", candidateTokens);
+
+                float candNll = CalculateSentenceNll(candidateSentence);
+
+                // Significant threshold: at least 3.5 nats improvement (33x more probable)
+                if (candNll < bestNll - 3.5f)
+                {
+                    bestNll = candNll;
+                    bestIdx = i;
+                    bestOrig = clean;
+                    bestReplacement = casedCand;
+                }
+            }
+        }
+
+        if (bestIdx >= 0 && bestOrig != null && bestReplacement != null)
+        {
+            string[] finalTokens = (string[])rawTokens.Clone();
+            int startPunct = 0;
+            string raw = rawTokens[bestIdx];
+            while (startPunct < raw.Length && char.IsPunctuation(raw[startPunct])) startPunct++;
+            string leading = startPunct > 0 ? raw.Substring(0, startPunct) : "";
+
+            int endPunct = raw.Length - 1;
+            while (endPunct >= startPunct && char.IsPunctuation(raw[endPunct])) endPunct--;
+            string trailing = (endPunct < raw.Length - 1) ? raw.Substring(endPunct + 1) : "";
+
+            finalTokens[bestIdx] = leading + bestReplacement + trailing;
+            string correctedText = string.Join(" ", finalTokens);
+
+            float conf = 1.0f - MathF.Exp(-(baseNll - bestNll));
+
+            return new CorrectionResult
+            {
+                HasCorrection = true,
+                OriginalText = text,
+                CorrectedText = correctedText,
+                Edits = new List<(string Original, string Replacement, float Confidence)>
+                {
+                    (bestOrig, bestReplacement, conf)
+                }
+            };
+        }
+
+        return null;
     }
 
     public void Dispose()

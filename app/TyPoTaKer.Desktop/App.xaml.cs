@@ -39,8 +39,13 @@ public partial class App : System.Windows.Application
         string vocab = Path.Combine(root, @"data\tokenizer\vocab.json");
         string merges = Path.Combine(root, @"data\tokenizer\merges.txt");
         string lm = Path.Combine(root, @"export\lm_stage1_int8.onnx");
-        string gec = Path.Combine(root, @"export\gec_stage1_int8.onnx");
-        string maps = Path.Combine(root, @"data\processed\gec\v2\edit_maps.json");
+
+        // Prefer Stage 2 (94M params) GEC model and v3 maps if present
+        string gecStage2 = Path.Combine(root, @"export\gec_stage2_int8.onnx");
+        string gec = File.Exists(gecStage2) ? gecStage2 : Path.Combine(root, @"export\gec_stage1_int8.onnx");
+
+        string mapsV3 = Path.Combine(root, @"data\processed\gec\v3\edit_maps.json");
+        string maps = File.Exists(mapsV3) ? mapsV3 : Path.Combine(root, @"data\processed\gec\v2\edit_maps.json");
 
         try
         {
