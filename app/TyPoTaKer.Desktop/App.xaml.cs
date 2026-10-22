@@ -21,7 +21,7 @@ public partial class App : System.Windows.Application
     {
         base.OnStartup(e);
 
-        string root = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\..\..\.."));
+        string root = FindWorkspaceRoot();
         string vocab = Path.Combine(root, @"data\tokenizer\vocab.json");
         string merges = Path.Combine(root, @"data\tokenizer\merges.txt");
         string lm = Path.Combine(root, @"export\lm_stage1_int8.onnx");
@@ -170,5 +170,35 @@ public partial class App : System.Windows.Application
         _tray?.Dispose();
         _engine?.Dispose();
         base.OnExit(e);
+    }
+
+    private static string FindWorkspaceRoot()
+    {
+        // 1. Check current working directory
+        string current = Directory.GetCurrentDirectory();
+        if (Directory.Exists(Path.Combine(current, "data", "tokenizer")) &&
+            Directory.Exists(Path.Combine(current, "export")))
+        {
+            return current;
+        }
+
+        // 2. Search upwards from AppDomain BaseDirectory
+        var dir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
+        while (dir != null)
+        {
+            if (Directory.Exists(Path.Combine(dir.FullName, "data", "tokenizer")) &&
+                Directory.Exists(Path.Combine(dir.FullName, "export")))
+            {
+                return dir.FullName;
+            }
+            dir = dir.Parent;
+        }
+
+        // 3. Fallback: Desktop/TyPoTaKer if known
+        string desktopPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "TyPoTaKer");
+        if (Directory.Exists(desktopPath))
+            return desktopPath;
+
+        return AppDomain.CurrentDomain.BaseDirectory;
     }
 }
