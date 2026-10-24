@@ -38,7 +38,8 @@ public partial class App : System.Windows.Application
         string root = FindWorkspaceRoot();
         string vocab = Path.Combine(root, @"data\tokenizer\vocab.json");
         string merges = Path.Combine(root, @"data\tokenizer\merges.txt");
-        string lm = Path.Combine(root, @"export\lm_stage1_int8.onnx");
+        string lmStage2 = Path.Combine(root, @"export\lm_stage2_int8.onnx");
+        string lm = File.Exists(lmStage2) ? lmStage2 : Path.Combine(root, @"export\lm_stage1_int8.onnx");
 
         // Prefer Stage 2 (94M params) GEC model and v3 maps if present
         string gecStage2 = Path.Combine(root, @"export\gec_stage2_int8.onnx");
