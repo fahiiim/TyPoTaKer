@@ -73,10 +73,10 @@ def benchmark_model(
 
 def main() -> None:
     models = [
-        ("export/lm_stage1.onnx", "lm"),
         ("export/lm_stage1_int8.onnx", "lm"),
-        ("export/gec_stage1.onnx", "gec"),
+        ("export/lm_stage2_int8.onnx", "lm"),
         ("export/gec_stage1_int8.onnx", "gec"),
+        ("export/gec_stage2_int8.onnx", "gec"),
     ]
 
     print("\n======================= ONNX CPU BENCHMARK =======================")
