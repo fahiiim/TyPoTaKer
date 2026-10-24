@@ -10,13 +10,12 @@ The model is trained from scratch on a single RTX 5070 and is designed around a 
 
 | Component | Current state |
 |---|---|
-| Stage 0 LM | 25,369,601 parameters; trained checkpoint available |
-| Stage 1 LM | 39,104,961 parameters; grown checkpoint available |
-| Tokenizer | 16k byte-level BPE with special tokens |
-| GEC model | Compact edit-tag head initialized from the LM trunk |
-| Training | BF16 CUDA, SDPA attention, optional `torch.compile`, six-hour cap |
-| Export | Float ONNX path exists; INT8 quantization and runtime benchmarking are next |
-| Desktop app | Stub only; model quality comes first |
+| Stage 0 LM | 25,369,601 parameters; baseline trained checkpoint available |
+| Stage 1 LM & GEC | 39,104,961 parameters; Stage 1 Quality Gate PASSED |
+| Stage 2 LM & GEC | 93,888,001 parameters; Stage 2 Quality Gate PASSED (99.2% clean preservation) |
+| Tokenizer | 16k byte-level BPE with special tokens and character CNN embeddings |
+| Export & Quantization | ONNX FP32 and INT8 quantized models (~125–138 MB, sub-10ms CPU latency) |
+| Desktop App | .NET 8 WPF system tray & caret overlay with right-click selection grammar check |
 
 The current architecture should be treated as an experimental research and engineering design. The model is not intended to compete with large general-purpose LLMs.
 
