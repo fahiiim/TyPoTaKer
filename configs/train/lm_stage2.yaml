@@ -16,10 +16,10 @@ optim:
   max_steps: 5000
   grad_clip: 1.0
 train:
-  micro_batch_size: 48
-  grad_accum: 2
+  micro_batch_size: 24
+  grad_accum: 4
   amp_dtype: bf16
-  compile: true
+  compile: false
   compile_mode: default
   seed: 42
   max_hours: 1.5
