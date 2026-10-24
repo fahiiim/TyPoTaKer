@@ -133,10 +133,10 @@ def train(cfg: TrainConfig) -> Path:
     start_step = 0
     samples_seen = 0
     resume_path = None
-    if cfg.train.resume == "auto":
+    if str(cfg.train.resume).lower() == "auto":
         resume_path = find_latest(root)
-    elif cfg.train.resume not in {"", "none", "false"}:
-        resume_path = Path(cfg.train.resume)
+    elif cfg.train.resume and str(cfg.train.resume).lower() not in {"", "none", "false"}:
+        resume_path = Path(str(cfg.train.resume))
 
     if resume_path is not None:
         blob = load_checkpoint(resume_path)
