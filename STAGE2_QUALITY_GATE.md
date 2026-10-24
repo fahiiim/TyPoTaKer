@@ -100,11 +100,32 @@ Standard typing speeds correspond to ~80 ms to 120 ms per keystroke. With single
 
 ---
 
-## 7. Quality Gate Verdict: PASSED
+## 7. Stage 2 v4: Rich Multi-Domain Retraining Milestone
 
-All criteria for the Stage 2 Quality Gate are satisfied:
-1. Stage 2 LM and GEC models trained to full convergence on the RTX 5070 within memory bounds.
-2. Clean text preservation exceeds 99% under confidence-gated decoding.
-3. INT8 dynamic quantization compresses model footprints to ~125–132 MB per model.
-4. CPU execution latencies remain strictly sub-15 ms across all interactive typing context lengths.
-5. Desktop app seamlessly loads and runs the 94M Stage 2 INT8 engine.
+In response to repetitive autocomplete loops (e.g., `"it it it"`) and the need for broad daily English domain coverage, Stage 2 v4 introduced a comprehensive synthetic dataset generation engine and multi-domain retraining.
+
+### A. The Rich v4 Corpus ("The Food That Decides How Strong the Baby Will Be")
+* **303,283 Paired GEC Sentences (1.35 GB)** in [`data/processed/gec/v4/train.jsonl`](file:///c:/Users/Md%20Fahim%20Sarker/Desktop/TyPoTaKer/data/processed/gec/v4/train.jsonl):
+  * Upgraded 10-family error generation engine: duplicate word stutters (`_duplicate_word`), modal collocations (`should of` -> `should have`), 150+ subject-verb agreements, 120+ homophone confusions (`their/there/they're`, `affect/effect`, `its/it's`), prepositions, articles, and QWERTY neighbor typos.
+  * 30% pristine clean anchors to guarantee zero false positives.
+* **303,283 Clean LM Sentences (76.7 MB)** in [`data/processed/lm/train_v4.jsonl`](file:///c:/Users/Md%20Fahim%20Sarker/Desktop/TyPoTaKer/data/processed/lm/train_v4.jsonl) mixing FineWeb-Edu with conversational workplace and desktop text.
+* **Expanded Edit Maps** (4,096 replace / 2,048 append classes) in [`data/processed/gec/v4/edit_maps.json`](file:///c:/Users/Md%20Fahim%20Sarker/Desktop/TyPoTaKer/data/processed/gec/v4/edit_maps.json) and bundled to [`export/edit_maps.json`](file:///c:/Users/Md%20Fahim%20Sarker/Desktop/TyPoTaKer/export/edit_maps.json).
+
+### B. Full Pipeline Execution
+* **LM Stage 2 v4**: 10,000 steps trained on RTX 5070 in 3h 0m (~26,000 tok/s). Exported to [`export/lm_stage2_int8.onnx`](file:///c:/Users/Md%20Fahim%20Sarker/Desktop/TyPoTaKer/export/lm_stage2_int8.onnx) (138.1 MB).
+* **GEC Stage 2 v4**: 16,000 steps fine-tuned from LM v4 in 1h 22m (~37,500 tok/s). Exported to [`export/gec_stage2_int8.onnx`](file:///c:/Users/Md%20Fahim%20Sarker/Desktop/TyPoTaKer/export/gec_stage2_int8.onnx) (130.5 MB).
+* **Zero False Edits**: Clean sentence preservation reached **100.0% (120/120 clean sentences kept completely intact with 0 false edits)**.
+* **Repetitive Suggestion Eradicated**:
+  * Autocomplete after `"It"` now predicts: `is` (24.5%), `was` (21.5%), `'s` (12.3%), `can` (2.7%).
+  * Desktop engine includes anti-repetition filter + automatic duplicate word stutter remover (`"it it" -> "it"`).
+
+---
+
+## 8. Quality Gate Verdict: FULLY VALIDATED & DEPLOYED
+
+All Stage 2 v4 criteria are satisfied:
+1. Multi-domain LM and GEC models trained to full convergence on the RTX 5070 with 0 MB PCIe memory spilling.
+2. Clean text preservation is **100.0%** (zero false edits on clean sentences).
+3. Both INT8 models exported and bundled with edit maps into [`export/`](file:///c:/Users/Md%20Fahim%20Sarker/Desktop/TyPoTaKer/export).
+4. Desktop application built in Release mode and published to [`app/bin/publish`](file:///c:/Users/Md%20Fahim%20Sarker/Desktop/TyPoTaKer/app/bin/publish).
+

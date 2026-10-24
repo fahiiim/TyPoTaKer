@@ -27,6 +27,8 @@ data/processed/**/*.txt
 # Edit maps needed for inference
 !data/processed/gec/v2/edit_maps.json
 !data/processed/gec/v3/edit_maps.json
+!data/processed/gec/v4/edit_maps.json
+!export/edit_maps.json
 
 # Checkpoints & Models
 checkpoints/
@@ -40,6 +42,7 @@ wandb/
 
 # Allow exported INT8 models (tracked via Git LFS)
 !export/gec_stage2_int8.onnx
+!export/lm_stage2_int8.onnx
 !export/lm_stage1_int8.onnx
 
 # Allow final Stage 2 PyTorch model weights (tracked via Git LFS)

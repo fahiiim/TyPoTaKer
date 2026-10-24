@@ -41,8 +41,50 @@ CONFUSIONS = [
     ("no", "know"),
     ("were", "where"),
     ("where", "were"),
+    ("accept", "except"),
+    ("except", "accept"),
+    ("advice", "advise"),
+    ("advise", "advice"),
+    ("principal", "principle"),
+    ("principle", "principal"),
+    ("complement", "compliment"),
+    ("compliment", "complement"),
+    ("past", "passed"),
+    ("passed", "past"),
+    ("lead", "led"),
+    ("led", "lead"),
+    ("break", "brake"),
+    ("brake", "break"),
+    ("fair", "fare"),
+    ("fare", "fair"),
+    ("hole", "whole"),
+    ("whole", "hole"),
+    ("meat", "meet"),
+    ("meet", "meat"),
+    ("plain", "plane"),
+    ("plane", "plain"),
+    ("sight", "site"),
+    ("site", "sight"),
+    ("wait", "weight"),
+    ("weight", "wait"),
+    ("weak", "week"),
+    ("week", "weak"),
+    ("which", "witch"),
+    ("witch", "which"),
+    ("allowed", "aloud"),
+    ("aloud", "allowed"),
+    ("board", "bored"),
+    ("bored", "board"),
+    ("one", "won"),
+    ("won", "one"),
+    ("our", "are"),
+    ("are", "our"),
+    ("though", "through"),
+    ("through", "though"),
+    ("thought", "taught"),
+    ("taught", "thought"),
 ]
-PREP = ["in", "on", "at", "to", "for", "from", "with", "by", "of", "about"]
+PREP = ["in", "on", "at", "to", "for", "from", "with", "by", "of", "about", "into", "onto"]
 ARTICLES = {"a", "an", "the"}
 KB_NEIGHBORS = {
     "a": "qwsz",
@@ -73,8 +115,7 @@ KB_NEIGHBORS = {
     "z": "asx",
 }
 
-# Correct -> intentionally corrupted. These cover frequent keyboard/spelling
-# mistakes that are useful for a desktop typing assistant.
+# Correct -> intentionally corrupted.
 COMMON_TYPOS = [
     ("the", "teh"),
     ("and", "adn"),
@@ -103,24 +144,118 @@ COMMON_TYPOS = [
     ("knowledge", "knowlege"),
     ("wanna", "wana"),
     ("gonna", "gona"),
+    ("friend", "freind"),
+    ("believe", "beleive"),
+    ("foreign", "foriegn"),
+    ("guarantee", "garantee"),
+    ("government", "goverment"),
+    ("remember", "rember"),
+    ("business", "buisness"),
+    ("colleague", "collegue"),
+    ("embarrass", "embarass"),
+    ("experience", "experiance"),
+    ("maintenance", "maintainance"),
+    ("possession", "posession"),
+    ("privilege", "privelege"),
+    ("recommend", "recommed"),
+    ("restaurant", "restaraunt"),
+    ("schedule", "schedual"),
+    ("surprise", "suprise"),
+    ("tongue", "tounge"),
+    ("truly", "truely"),
+    ("writing", "writting"),
+    ("written", "writen"),
 ]
 
-# Clean token sequences -> common grammar errors. We only apply transformations
-# when the full local pattern matches, avoiding the old arbitrary "add s" rule.
+# Clean token sequences -> common grammar errors.
 GRAMMAR_PATTERNS = [
+    # Modals + of instead of have
+    (("should", "have"), ("should", "of")),
+    (("could", "have"), ("could", "of")),
+    (("would", "have"), ("would", "of")),
+    (("must", "have"), ("must", "of")),
+    # Subject-verb agreement: has vs have
     (("i", "have"), ("i", "has")),
+    (("you", "have"), ("you", "has")),
+    (("we", "have"), ("we", "has")),
+    (("they", "have"), ("they", "has")),
     (("she", "has"), ("she", "have")),
     (("he", "has"), ("he", "have")),
+    (("it", "has"), ("it", "have")),
+    # Subject-verb agreement: is/are/was/were
     (("they", "are"), ("they", "is")),
     (("we", "are"), ("we", "is")),
+    (("you", "are"), ("you", "is")),
+    (("people", "are"), ("people", "is")),
+    (("children", "are"), ("children", "is")),
+    (("users", "are"), ("users", "is")),
+    (("servers", "are"), ("servers", "is")),
+    (("files", "are"), ("files", "is")),
     (("we", "were"), ("we", "was")),
     (("they", "were"), ("they", "was")),
+    (("you", "were"), ("you", "was")),
+    # 3rd person singular present verbs
     (("she", "goes"), ("she", "go")),
     (("he", "goes"), ("he", "go")),
+    (("it", "goes"), ("it", "go")),
     (("it", "works"), ("it", "work")),
     (("the", "server", "listens"), ("the", "server", "listen")),
     (("everyone", "is"), ("everyone", "are")),
     (("one", "of", "the"), ("one", "of", "a")),
+    (("he", "likes"), ("he", "like")),
+    (("she", "likes"), ("she", "like")),
+    (("it", "makes"), ("it", "make")),
+    (("he", "makes"), ("he", "make")),
+    (("she", "makes"), ("she", "make")),
+    (("he", "wants"), ("he", "want")),
+    (("she", "wants"), ("she", "want")),
+    (("it", "wants"), ("it", "want")),
+    (("he", "knows"), ("he", "know")),
+    (("she", "knows"), ("she", "know")),
+    (("it", "seems"), ("it", "seem")),
+    (("he", "thinks"), ("he", "think")),
+    (("she", "thinks"), ("she", "think")),
+    (("it", "takes"), ("it", "take")),
+    (("he", "gives"), ("he", "give")),
+    (("she", "gives"), ("she", "give")),
+    (("he", "tells"), ("he", "tell")),
+    (("she", "tells"), ("she", "tell")),
+    (("he", "asks"), ("he", "ask")),
+    (("she", "asks"), ("she", "ask")),
+    (("he", "feels"), ("he", "feel")),
+    (("she", "feels"), ("she", "feel")),
+    (("it", "feels"), ("it", "feel")),
+    # Negatives: doesn't vs don't
+    (("he", "doesn't"), ("he", "don't")),
+    (("she", "doesn't"), ("she", "don't")),
+    (("it", "doesn't"), ("it", "don't")),
+    (("that", "doesn't"), ("that", "don't")),
+    (("this", "doesn't"), ("this", "don't")),
+    # Preposition collocations
+    (("interested", "in"), ("interested", "on")),
+    (("good", "at"), ("good", "in")),
+    (("depends", "on"), ("depends", "of")),
+    (("listen", "to"), ("listen", "at")),
+    (("arrive", "at"), ("arrive", "to")),
+    (("married", "to"), ("married", "with")),
+    (("responsible", "for"), ("responsible", "of")),
+    (("similar", "to"), ("similar", "with")),
+    (("afraid", "of"), ("afraid", "from")),
+    (("capable", "of"), ("capable", "to")),
+    (("congratulate", "on"), ("congratulate", "for")),
+    # Articles
+    (("an", "apple"), ("a", "apple")),
+    (("an", "hour"), ("a", "hour")),
+    (("an", "email"), ("a", "email")),
+    (("an", "idea"), ("a", "idea")),
+    (("an", "error"), ("a", "error")),
+    (("an", "example"), ("a", "example")),
+    (("an", "orange"), ("a", "orange")),
+    (("a", "university"), ("an", "university")),
+    (("a", "user"), ("an", "user")),
+    (("a", "car"), ("an", "car")),
+    (("a", "dog"), ("an", "dog")),
+    (("a", "computer"), ("an", "computer")),
 ]
 
 
@@ -224,6 +359,16 @@ def _remove_apostrophe(words: list[str], gaps: list[str], rng: random.Random) ->
     return True
 
 
+def _duplicate_word(words: list[str], gaps: list[str], rng: random.Random) -> bool:
+    candidates = [i for i, w in enumerate(words) if w.isalpha() and len(w) <= 6]
+    if not candidates:
+        return False
+    idx = rng.choice(candidates)
+    words.insert(idx + 1, words[idx])
+    gaps.insert(idx + 1, " ")
+    return True
+
+
 def corrupt_sentence(
     text: str,
     rng: random.Random | None = None,
@@ -260,7 +405,9 @@ def corrupt_sentence(
                 "prep",
                 "case",
                 "grammar",
+                "grammar",
                 "apostrophe",
+                "dup_word",
             ]
         )
         changed = False
@@ -303,6 +450,8 @@ def corrupt_sentence(
             changed = _apply_grammar_pattern(words, rng)
         elif op == "apostrophe":
             changed = _remove_apostrophe(words, gaps, rng)
+        elif op == "dup_word":
+            changed = _duplicate_word(words, gaps, rng)
         if changed:
             applied += 1
     return _render_tokens(words, gaps)

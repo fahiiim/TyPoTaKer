@@ -45,8 +45,9 @@ public partial class App : System.Windows.Application
         string gecStage2 = Path.Combine(root, @"export\gec_stage2_int8.onnx");
         string gec = File.Exists(gecStage2) ? gecStage2 : Path.Combine(root, @"export\gec_stage1_int8.onnx");
 
+        string mapsV4 = Path.Combine(root, @"data\processed\gec\v4\edit_maps.json");
         string mapsV3 = Path.Combine(root, @"data\processed\gec\v3\edit_maps.json");
-        string maps = File.Exists(mapsV3) ? mapsV3 : Path.Combine(root, @"data\processed\gec\v2\edit_maps.json");
+        string maps = File.Exists(mapsV4) ? mapsV4 : (File.Exists(mapsV3) ? mapsV3 : Path.Combine(root, @"data\processed\gec\v2\edit_maps.json"));
 
         try
         {

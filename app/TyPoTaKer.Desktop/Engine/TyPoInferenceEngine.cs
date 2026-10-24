@@ -149,10 +149,12 @@ public sealed class TyPoInferenceEngine : IDisposable
         if (string.IsNullOrWhiteSpace(text))
             return new List<AutocompleteSuggestion>();
 
-        // Always trim trailing whitespace for next-word completion context
         string trimmed = text.TrimEnd();
         if (string.IsNullOrWhiteSpace(trimmed))
             return new List<AutocompleteSuggestion>();
+
+        string[] recentWords = trimmed.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+        string lastWord = recentWords.Length > 0 ? recentWords[^1].Trim(".,!?:;\"'()[]{}<>-/\\".ToCharArray()).ToLowerInvariant() : "";
 
         var (tokenIds, tokenPieces) = _tokenizer.Encode(trimmed, addBos: true, addEos: false);
         int seqLen = tokenIds.Count;
@@ -221,6 +223,10 @@ public sealed class TyPoInferenceEngine : IDisposable
             if (ExcludedCompletions.Contains(clean)) continue;
             if (!_validWords.Contains(clean)) continue;
 
+            // Anti-repetition: Never suggest the word the user just typed!
+            if (!string.IsNullOrEmpty(lastWord) && string.Equals(clean, lastWord, StringComparison.OrdinalIgnoreCase))
+                continue;
+
             suggestions.Add(new AutocompleteSuggestion
             {
                 Text = clean,
@@ -249,6 +255,11 @@ public sealed class TyPoInferenceEngine : IDisposable
         }
 
         string trimmedText = text.Trim();
+        var duplicateFix = TryFixDuplicateWords(trimmedText);
+        if (duplicateFix != null)
+        {
+            return duplicateFix;
+        }
         string[] originalWords = trimmedText.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
         bool allOriginalWordsValid = originalWords.All(IsValidWord);
 
@@ -629,6 +640,39 @@ public sealed class TyPoInferenceEngine : IDisposable
                     (suspiciousClean, bestReplacement, conf)
                 }
             };
+        }
+
+        return null;
+    }
+
+    private static CorrectionResult? TryFixDuplicateWords(string text)
+    {
+        string[] rawTokens = text.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        if (rawTokens.Length < 2) return null;
+
+        for (int i = 0; i < rawTokens.Length - 1; i++)
+        {
+            string w1 = rawTokens[i].Trim(".,!?:;\"'()[]{}<>-/\\".ToCharArray()).ToLowerInvariant();
+            string w2 = rawTokens[i + 1].Trim(".,!?:;\"'()[]{}<>-/\\".ToCharArray()).ToLowerInvariant();
+
+            if (w1.Length > 0 && w1 == w2 && w1 != "had" && w1 != "that")
+            {
+                var list = new List<string>(rawTokens);
+                list.RemoveAt(i + 1);
+                string correctedText = string.Join(" ", list);
+                string dupPhrase = rawTokens[i] + " " + rawTokens[i + 1];
+
+                return new CorrectionResult
+                {
+                    HasCorrection = true,
+                    OriginalText = text,
+                    CorrectedText = correctedText,
+                    Edits = new List<(string Original, string Replacement, float Confidence)>
+                    {
+                        (dupPhrase, rawTokens[i], 0.99f)
+                    }
+                };
+            }
         }
 
         return null;
