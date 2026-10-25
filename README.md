@@ -17,7 +17,7 @@
 
 ---
 
-## 🎯 Executive Summary & Mission
+## Executive Summary & Mission
 
 **TypoFormer** is a purpose-engineered, character-aware neural backbone designed from the ground up to solve two conflicting natural language problems inside a single unified **94M parameter** trunk:
 
@@ -28,25 +28,25 @@ By fusing **Byte-Level BPE subwords** with **Multi-Scale Character 1D-Convolutio
 
 ---
 
-## ⚔️ TypoFormer vs. BERT: Architectural Head-to-Head
+## TypoFormer vs. BERT: Architectural Head-to-Head
 
 A frequent question in edge NLP is: *"Why not simply fine-tune BERT for typo and grammar correction?"*
 
 BERT (Devlin et al., 2018) is fundamentally a static masked language modeling (MLM) encoder designed for holistic classification. Applying BERT to real-time interactive typing reveals severe architectural bottlenecks that TypoFormer systematically resolves:
 
-| Architectural Dimension | 🏛️ Classical BERT-Base (110M) | ⚡ TypoFormer (94M INT8) | Engineering Advantage of TypoFormer |
+| Architectural Dimension | Classical BERT-Base (110M) | TypoFormer (94M INT8) | Engineering Advantage of TypoFormer |
 | :--- | :--- | :--- | :--- |
-| **Generative Autocomplete** | ❌ **Incapable** (Bidirectional MLM only; generating next word requires artificial masking loops) | ✅ **Native Causal Mode** (Swappable triangular causal mask enables immediate top-K next-token logits) | **Single Unified Trunk**: One model serves both autocomplete and grammar correction. |
-| **Typo & OOV Robustness** | ❌ **Brittle WordPiece** (A misspelling like `teh` or `recieving` splits into random fragments `['te', '##h']`) | ✅ **Gated Character-CNN Highway** (Embeds raw UTF-8 token bytes via parallel 1D conv filters) | **Typo Immunity**: Never blinded by unknown character corruptions or casing anomalies. |
-| **Position Encoding** | ⚠️ **Absolute Learned Positional** (Fixed length 512, poor relative translation invariance) | ✅ **Rotary Position Embeddings (RoPE)** (Frequency-based relative query-key rotation) | **Sequence Extrapolation**: Superior relative token distance awareness across cursor movements. |
-| **Attention Mechanism** | ⚠️ **Multi-Head Attention (MHA)** (12 Q, 12 K, 12 V heads; quadratic memory bandwidth) | ✅ **Grouped Query Attention (GQA)** (12 Query heads, 4 Key/Value heads — $3:1$ ratio) | **3x Memory Reduction**: Drastically reduces KV memory traffic during interactive streaming. |
-| **Feed-Forward Backbone** | ⚠️ **GeLU + LayerNorm** (Classical additive bias normalization) | ✅ **SwiGLU + Pre-RMSNorm** (Gated Swish linear units with zero-mean scaling) | **LLaMA/Mistral-Grade Capacity**: Higher expressivity per parameter without gradient instability. |
-| **GEC Formulation** | ⚠️ **Sequence-to-Sequence Autoregressive** (Prone to hallucinating new phrases; 300–600ms latency) | ✅ **Constrained Atomic Edit-Tagging** (`KEEP`, `DELETE`, `CASE`, `REPLACE`, `APPEND`) | **Zero Hallucination**: Guaranteed content fidelity; 99.2% clean sentence preservation. |
-| **Runtime Latency** | ❌ **150ms – 400ms** on CPU (FP32) | ⚡ **< 10ms** on CPU (INT8 Quantized ONNX) | **Real-Time Keystroke Budget**: Executes comfortably inside the 16ms 60 FPS display window. |
+| **Generative Autocomplete** | **Incapable** (Bidirectional MLM only; generating next word requires artificial masking loops) | **Native Causal Mode** (Swappable triangular causal mask enables immediate top-K next-token logits) | **Single Unified Trunk**: One model serves both autocomplete and grammar correction. |
+| **Typo & OOV Robustness** | **Brittle WordPiece** (A misspelling like `teh` or `recieving` splits into random fragments `['te', '##h']`) | **Gated Character-CNN Highway** (Embeds raw UTF-8 token bytes via parallel 1D conv filters) | **Typo Immunity**: Never blinded by unknown character corruptions or casing anomalies. |
+| **Position Encoding** | **Absolute Learned Positional** (Fixed length 512, poor relative translation invariance) | **Rotary Position Embeddings (RoPE)** (Frequency-based relative query-key rotation) | **Sequence Extrapolation**: Superior relative token distance awareness across cursor movements. |
+| **Attention Mechanism** | **Multi-Head Attention (MHA)** (12 Q, 12 K, 12 V heads; quadratic memory bandwidth) | **Grouped Query Attention (GQA)** (12 Query heads, 4 Key/Value heads — 3:1 ratio) | **3x Memory Reduction**: Drastically reduces KV memory traffic during interactive streaming. |
+| **Feed-Forward Backbone** | **GeLU + LayerNorm** (Classical additive bias normalization) | **SwiGLU + Pre-RMSNorm** (Gated Swish linear units with zero-mean scaling) | **LLaMA/Mistral-Grade Capacity**: Higher expressivity per parameter without gradient instability. |
+| **GEC Formulation** | **Sequence-to-Sequence Autoregressive** (Prone to hallucinating new phrases; 300–600ms latency) | **Constrained Atomic Edit-Tagging** (`KEEP`, `DELETE`, `CASE`, `REPLACE`, `APPEND`) | **Zero Hallucination**: Guaranteed content fidelity; 99.2% clean sentence preservation. |
+| **Runtime Latency** | **150ms – 400ms** on CPU (FP32) | **< 10ms** on CPU (INT8 Quantized ONNX) | **Real-Time Keystroke Budget**: Executes comfortably inside the 16ms 60 FPS display window. |
 
 ---
 
-## 🔬 TypoFormer Core Architecture
+## TypoFormer Core Architecture
 
 ```text
                                +---------------------------------------------+
@@ -89,7 +89,7 @@ BERT (Devlin et al., 2018) is fundamentally a static masked language modeling (M
 
 ---
 
-## 🧩 Architectural Deep Dive
+## Architectural Deep Dive
 
 ### 1. The Gated Character-CNN Highway
 Standard tokenizers fail when words are corrupted: mistyping `"definitely"` as `"definatly"` converts a single semantic token into multiple rare subword fragments. 
@@ -151,7 +151,7 @@ $$\text{Action}(t_i) = \begin{cases} a^* & \text{if } P(a^* \mid \mathbf{h}_i) >
 
 ---
 
-## 📊 Model Specifications & Stage Scaling
+## Model Specifications & Stage Scaling
 
 TypoFormer uses a staged growth architecture trained with curriculum scaling from Stage 0 to Stage 2:
 
@@ -170,7 +170,7 @@ TypoFormer uses a staged growth architecture trained with curriculum scaling fro
 
 ---
 
-## ⚡ Deployment & Integration
+## Deployment & Integration
 
 The production weights are exported to optimized **ONNX graphs** with symmetric INT8 quantization:
 
@@ -187,7 +187,7 @@ The companion Windows desktop application runs entirely offline using `.NET 8 WP
 
 ---
 
-## 📜 License & Citation
+## License & Citation
 
 TypoFormer is licensed under the [MIT License](LICENSE).
 

@@ -85,24 +85,24 @@ public partial class CaretOverlayWindow : Window
 
             SuggestionText.Text = displayLabel;
             HotkeyBadge.Visibility = Visibility.Visible;
-            HotkeyText.Text = AllowTabAccept ? "Tab ⇥" : "Ctrl + Space";
+            HotkeyText.Text = AllowTabAccept ? "Tab" : "Ctrl + Space";
 
             var bc = new BrushConverter();
             switch (badgeType)
             {
                 case SuggestionBadgeType.Fix:
                     ModeBadge.Background = (Brush)bc.ConvertFromString("#10B981")!;
-                    ModeText.Text = "⚡ FIX";
+                    ModeText.Text = "FIX";
                     PillBorder.BorderBrush = (Brush)bc.ConvertFromString("#34D399")!;
                     break;
                 case SuggestionBadgeType.Next:
                     ModeBadge.Background = (Brush)bc.ConvertFromString("#6366F1")!;
-                    ModeText.Text = "✨ NEXT";
+                    ModeText.Text = "NEXT";
                     PillBorder.BorderBrush = (Brush)bc.ConvertFromString("#818CF8")!;
                     break;
                 case SuggestionBadgeType.Clean:
                     ModeBadge.Background = (Brush)bc.ConvertFromString("#059669")!;
-                    ModeText.Text = "✓ CLEAN";
+                    ModeText.Text = "CLEAN";
                     PillBorder.BorderBrush = (Brush)bc.ConvertFromString("#10B981")!;
                     HotkeyBadge.Visibility = Visibility.Collapsed;
                     break;

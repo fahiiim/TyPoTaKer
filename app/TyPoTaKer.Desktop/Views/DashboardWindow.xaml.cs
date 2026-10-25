@@ -71,7 +71,7 @@ public partial class DashboardWindow : Window
     private void OnResetBufferClick(object sender, RoutedEventArgs e)
     {
         ResetBufferRequested?.Invoke(this, EventArgs.Empty);
-        PlaygroundStatusText.Text = "✓ Memory buffer cleared! Ready for fresh typing context.";
+        PlaygroundStatusText.Text = "Memory buffer cleared. Ready for fresh typing context.";
     }
 
     private void OnClearPlaygroundClick(object sender, RoutedEventArgs e)

@@ -53,7 +53,7 @@
                             Margin="0,0,9,0"
                             Background="#6366F1">
                         <TextBlock x:Name="ModeText"
-                                   Text="✨ NEXT"
+                                   Text="NEXT"
                                    FontFamily="Segoe UI"
                                    FontSize="11"
                                    FontWeight="Bold"
@@ -80,7 +80,7 @@
                             Margin="0,0,8,0"
                             VerticalAlignment="Center">
                         <TextBlock x:Name="HotkeyText"
-                                   Text="Tab ⇥"
+                                   Text="Tab"
                                    FontFamily="Segoe UI Variable Small, Consolas, Segoe UI"
                                    FontSize="10.5"
                                    FontWeight="Bold"
@@ -88,7 +88,7 @@
                     </Border>
                 </StackPanel>
 
-                <!-- Dismiss Button (✕ Esc) -->
+                <!-- Dismiss Button (Esc) -->
                 <Border x:Name="DismissButton"
                         Background="#1E293B"
                         BorderBrush="#334155"
@@ -99,7 +99,7 @@
                         VerticalAlignment="Center"
                         ToolTip="Dismiss (Esc)"
                         MouseLeftButtonDown="OnDismissClick">
-                    <TextBlock Text="✕ Esc"
+                    <TextBlock Text="Esc"
                                FontFamily="Segoe UI Variable Small, Consolas, Segoe UI"
                                FontSize="10"
                                FontWeight="SemiBold"
