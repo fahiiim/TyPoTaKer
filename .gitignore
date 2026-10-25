@@ -62,6 +62,7 @@ desktop.ini
 .hf_cache/
 .cache/
 scratch/
+hf_dist/
 *.log
 
 # .NET
