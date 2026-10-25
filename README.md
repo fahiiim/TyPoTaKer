@@ -96,11 +96,21 @@ BERT (Devlin et al., 2018) is fundamentally a static masked language modeling (M
 Standard tokenizers fail when words are corrupted: mistyping `"definitely"` as `"definatly"` converts a single semantic token into multiple rare subword fragments. 
 
 TypoFormer prevents this tokenization distortion through a hybrid input representation:
+
 1. **Byte-Level BPE**: Words are split into standard BPE tokens from a compact 16,000-vocabulary dictionary.
-2. **Byte Sequence Convolutions**: Concurrently, the exact UTF-8 character bytes of each token are fed into 4 parallel 1D convolutional banks with kernel sizes $k \in \{2, 3, 5, 8\}$:
-   $$\mathbf{C}_k = \text{MaxPool}\left(\text{ReLU}\left(\text{Conv1D}_k(\text{Bytes})\right)\right)$$
-3. **Adaptive Highway Gating**: A learned per-dimension sigmoid gate $\alpha \in [0, 1]$ balances the semantic subword vector $\mathbf{E}_{\text{bpe}}$ and the sub-character morphological feature $\mathbf{E}_{\text{char}}$:
-   $$\mathbf{h}_0 = \alpha \odot \mathbf{E}_{\text{bpe}} + (1 - \alpha) \odot \mathbf{E}_{\text{char}}$$
+
+2. **Byte Sequence Convolutions**: Concurrently, the exact UTF-8 character bytes of each token are fed into 4 parallel 1D convolutional banks with kernel sizes $`k \in \{2, 3, 5, 8\}`$:
+
+$$
+\mathbf{C}_k = \operatorname{MaxPool}\left(\operatorname{ReLU}\left(\operatorname{Conv1D}_k(\text{Bytes})\right)\right)
+$$
+
+3. **Adaptive Highway Gating**: A learned per-dimension sigmoid gate $`\alpha \in [0, 1]`$ balances the semantic subword vector $`\mathbf{E}_{\text{bpe}}`$ and the sub-character morphological feature $`\mathbf{E}_{\text{char}}`$:
+
+$$
+\mathbf{h}_0 = \alpha \odot \mathbf{E}_{\text{bpe}} + (1 - \alpha) \odot \mathbf{E}_{\text{char}}
+$$
+
 *Result*: Even if a word has never been seen in training or is severely scrambled, the Character-CNN extracts the root morphological signature, preserving deep contextual comprehension.
 
 ---
@@ -109,27 +119,46 @@ TypoFormer prevents this tokenization distortion through a hybrid input represen
 TypoFormer incorporates the most efficient structural innovations from modern frontier LLMs:
 
 * **Grouped Query Attention (GQA)**: Configured with 12 Query attention heads and 4 Key-Value heads. Rather than replicating KV matrices for every query head, 3 query heads share a single KV head, reducing memory bus traffic by **66%** and accelerating single-token autoregressive decoding.
+
 * **Rotary Position Embedding (RoPE)**: Eliminates static absolute position tables. Query and Key vectors are rotated in complex 2D subspaces proportional to their token position:
-   $$\mathbf{q}_m = \mathbf{R}_{\Theta, m} \mathbf{W}_q \mathbf{x}_m, \quad \mathbf{k}_n = \mathbf{R}_{\Theta, n} \mathbf{W}_k \mathbf{x}_n$$
+
+$$
+\mathbf{q}_m = \mathbf{R}_{\Theta, m} \mathbf{W}_q \mathbf{x}_m, \quad \mathbf{k}_n = \mathbf{R}_{\Theta, n} \mathbf{W}_k \mathbf{x}_n
+$$
+
 * **SwiGLU Non-Linearity**: Replaces legacy GeLU with a gated linear unit driven by the Swish activation function:
-   $$\text{SwiGLU}(\mathbf{x}) = \left(\mathbf{x}\mathbf{W}_{\text{gate}} \cdot \text{sigmoid}(\beta \mathbf{x}\mathbf{W}_{\text{gate}})\right) \otimes (\mathbf{x}\mathbf{W}_{\text{up}}) \mathbf{W}_{\text{down}}$$
+
+$$
+\operatorname{SwiGLU}(\mathbf{x}) = \left(\mathbf{x}\mathbf{W}_{\text{gate}} \cdot \operatorname{sigmoid}(\beta \mathbf{x}\mathbf{W}_{\text{gate}})\right) \otimes (\mathbf{x}\mathbf{W}_{\text{up}}) \mathbf{W}_{\text{down}}
+$$
+
 * **Pre-RMSNorm**: Normalizes layer inputs using Root Mean Square statistics without mean-centering offsets, avoiding floating-point drift and stabilizing FP16/INT8 weight quantization.
 
 ---
 
 ### 3. Dual-Mode Attention Switching
 TypoFormer dynamically alters its attention matrix based on the runtime task:
+
 * **Inference Task: Next-Word Autocomplete (Causal Mode)**:
-  $$\mathbf{M}_{i, j} = \begin{cases} 0 & \text{if } j \le i \\ -\infty & \text{if } j > i \end{cases}$$
-  The model attends strictly to preceding tokens, generating next-word logits in a single causal forward pass.
+
+$$
+\mathbf{M}_{i, j} = \begin{cases} 0 & \text{if } j \le i \\ -\infty & \text{if } j > i \end{cases}
+$$
+
+The model attends strictly to preceding tokens, generating next-word logits in a single causal forward pass.
+
 * **Inference Task: Grammar & Spell Correction (Bidirectional Mode)**:
-  $$\mathbf{M}_{i, j} = 0 \quad \forall i, j$$
-  The model attends simultaneously to left and right contexts across the complete sentence, allowing it to evaluate grammatical agreement (e.g., verifying subject-verb agreement `"they is"` $\rightarrow$ `"they are"` where context on both sides determines the fix).
+
+$$
+\mathbf{M}_{i, j} = 0 \quad \forall i, j
+$$
+
+The model attends simultaneously to left and right contexts across the complete sentence, allowing it to evaluate grammatical agreement (e.g., verifying subject-verb agreement `"they is"` → `"they are"` where context on both sides determines the fix).
 
 ---
 
 ### 4. Constrained Atomic Edit-Tagging (GEC Head)
-Unlike sequence-to-sequence models (e.g., T5 or BART) that rewrite entire sentences token by token, TypoFormer treats grammar correction as a **non-autoregressive token action classification** problem. For each input token $t_i$, the GEC head outputs one of five atomic actions:
+Unlike sequence-to-sequence models (e.g., T5 or BART) that rewrite entire sentences token by token, TypoFormer treats grammar correction as a **non-autoregressive token action classification** problem. For each input token $`t_i`$, the GEC head outputs one of five atomic actions:
 
 ```text
   [Input]         The      quikc     fox      jumps     over     the     lazy     dogs  .
@@ -140,14 +169,18 @@ Unlike sequence-to-sequence models (e.g., T5 or BART) that rewrite entire senten
 ```
 
 1. **`KEEP`**: Preserve token unmodified (95%+ of clean text).
-2. **`DELETE`**: Strip extraneous duplicate words (e.g., `the the` $\rightarrow$ `the`).
-3. **`CASE`**: Toggle capitalization (e.g., `i` $\rightarrow$ `I`, `monday` $\rightarrow$ `Monday`).
+2. **`DELETE`**: Strip extraneous duplicate words (e.g., `the the` → `the`).
+3. **`CASE`**: Toggle capitalization (e.g., `i` → `I`, `monday` → `Monday`).
 4. **`REPLACE[k]`**: Substitute the token with target vocabulary entry $k$ from a high-frequency confusion dictionary.
 5. **`APPEND[k]`**: Insert missing preposition or article $k$ directly after current token.
 
 #### Mathematical Confidence Margin
-To prevent false-positive overcorrections on creative or informal writing, edits are gated by a precision margin $\tau$:
-$$\text{Action}(t_i) = \begin{cases} a^* & \text{if } P(a^* \mid \mathbf{h}_i) > P(\text{KEEP} \mid \mathbf{h}_i) + \tau \\ \text{KEEP} & \text{otherwise} \end{cases}$$
+To prevent false-positive overcorrections on creative or informal writing, edits are gated by a precision margin $`\tau`$:
+
+$$
+\operatorname{Action}(t_i) = \begin{cases} a^* & \text{if } P(a^* \mid \mathbf{h}_i) > P(\text{KEEP} \mid \mathbf{h}_i) + \tau \\ \text{KEEP} & \text{otherwise} \end{cases}
+$$
+
 *Result*: TypoFormer achieves a **99.2% preservation rate** on clean, error-free prose, eliminating user irritation from unwanted edits.
 
 ---
@@ -160,11 +193,11 @@ TypoFormer uses a staged growth architecture trained with curriculum scaling fro
 | :--- | :--- | :--- | :--- |
 | **Total Parameters** | 25,369,601 | 39,104,961 | **93,888,001** |
 | **Transformer Blocks** | 6 | 8 | **10** |
-| **Hidden Dimension ($d_{\text{model}}$)** | 512 | 640 | **768** |
-| **Feed-Forward Dimension ($d_{\text{ff}}$)** | 1,376 | 1,728 | **2,048** |
+| **Hidden Dimension ($`d_{\text{model}}`$)** | 512 | 640 | **768** |
+| **Feed-Forward Dimension ($`d_{\text{ff}}`$)** | 1,376 | 1,728 | **2,048** |
 | **Attention Heads (Q / KV)** | 8 / 2 (GQA) | 10 / 2 (GQA) | **12 / 4 (GQA)** |
 | **Tokenizer Vocabulary** | 16,000 Byte BPE | 16,000 Byte BPE | **16,000 Byte BPE** |
-| **Context Window ($L_{\text{max}}$)** | 512 tokens | 512 tokens | **512 tokens** |
+| **Context Window ($`L_{\text{max}}`$)** | 512 tokens | 512 tokens | **512 tokens** |
 | **Quantized Model Size (INT8)** | ~34 MB | ~64 MB | **130 MB** |
 | **CPU Inference Latency** | ~3.8 ms | ~5.9 ms | **~8.7 ms** |
 | **Clean Sentence Retention** | 94.1% | 97.4% | **99.2%** |
