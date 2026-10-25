@@ -41,13 +41,21 @@ public partial class App : System.Windows.Application
         string lmStage2 = Path.Combine(root, @"export\lm_stage2_int8.onnx");
         string lm = File.Exists(lmStage2) ? lmStage2 : Path.Combine(root, @"export\lm_stage1_int8.onnx");
 
-        // Prefer Stage 2 (94M params) GEC model and v3 maps if present
+        // Prefer Stage 2 (94M params) GEC model and v4 maps if present
         string gecStage2 = Path.Combine(root, @"export\gec_stage2_int8.onnx");
         string gec = File.Exists(gecStage2) ? gecStage2 : Path.Combine(root, @"export\gec_stage1_int8.onnx");
 
         string mapsV4 = Path.Combine(root, @"data\processed\gec\v4\edit_maps.json");
+        string mapsExport = Path.Combine(root, @"export\edit_maps.json");
         string mapsV3 = Path.Combine(root, @"data\processed\gec\v3\edit_maps.json");
-        string maps = File.Exists(mapsV4) ? mapsV4 : (File.Exists(mapsV3) ? mapsV3 : Path.Combine(root, @"data\processed\gec\v2\edit_maps.json"));
+        string maps = File.Exists(mapsV4) ? mapsV4 : (File.Exists(mapsExport) ? mapsExport : (File.Exists(mapsV3) ? mapsV3 : Path.Combine(root, @"data\processed\gec\v2\edit_maps.json")));
+
+        try
+        {
+            File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "startup.log"),
+                $"Time: {DateTime.Now}\nRoot: {root}\nLM: {lm} (Exists={File.Exists(lm)})\nGEC: {gec} (Exists={File.Exists(gec)})\nMaps: {maps} (Exists={File.Exists(maps)})\n");
+        }
+        catch { }
 
         try
         {
@@ -244,11 +252,14 @@ public partial class App : System.Windows.Application
             string completion = best.Text.Trim();
             if (!string.IsNullOrWhiteSpace(completion))
             {
+                // Autocomplete completions add a trailing space for smooth next-word typing
+                string insertionText = completion + " ";
+
                 _overlay.ShowSuggestion(
                     screenPos: caret.ScreenPosition,
                     heightOffset: caret.CaretHeight,
                     displayLabel: completion,
-                    insertionText: completion,
+                    insertionText: insertionText,
                     badgeType: SuggestionBadgeType.Next,
                     backspaces: 0,
                     isSelectionReplacement: false,
@@ -363,12 +374,18 @@ public partial class App : System.Windows.Application
                 // Text is currently selected in the active window.
                 // In Windows, typing or sending Unicode characters into selected text replaces the selection directly.
                 KeyboardHook.SendText(insertion, backspacesCount: 0);
+                _hook?.ClearBuffer();
             }
             else
             {
                 // Keystroke replacement with backspaces
                 KeyboardHook.SendText(insertion, backspaces);
+                _hook?.UpdateBufferOnAccept(backspaces, insertion);
             }
+
+            // Immediately restart the debouncer on the newly updated buffer so the NEXT suggestion is accurate
+            _debounceTimer?.Stop();
+            _debounceTimer?.Start();
         }
     }
 
@@ -386,17 +403,11 @@ public partial class App : System.Windows.Application
 
     private static string FindWorkspaceRoot()
     {
-        string current = Directory.GetCurrentDirectory();
-        if (Directory.Exists(Path.Combine(current, "data", "tokenizer")) &&
-            Directory.Exists(Path.Combine(current, "export")))
-        {
-            return current;
-        }
-
+        // 1. Search upwards from BaseDirectory for repository root containing pyproject.toml
         var dir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
         while (dir != null)
         {
-            if (Directory.Exists(Path.Combine(dir.FullName, "data", "tokenizer")) &&
+            if (File.Exists(Path.Combine(dir.FullName, "pyproject.toml")) &&
                 Directory.Exists(Path.Combine(dir.FullName, "export")))
             {
                 return dir.FullName;
@@ -404,8 +415,16 @@ public partial class App : System.Windows.Application
             dir = dir.Parent;
         }
 
+        // 2. Current working directory
+        string current = Directory.GetCurrentDirectory();
+        if (File.Exists(Path.Combine(current, "pyproject.toml")) &&
+            Directory.Exists(Path.Combine(current, "export")))
+        {
+            return current;
+        }
+
         string desktopPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "TyPoTaKer");
-        if (Directory.Exists(desktopPath))
+        if (File.Exists(Path.Combine(desktopPath, "pyproject.toml")))
             return desktopPath;
 
         return AppDomain.CurrentDomain.BaseDirectory;

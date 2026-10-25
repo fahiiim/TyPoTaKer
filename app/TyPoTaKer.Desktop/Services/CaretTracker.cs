@@ -1,6 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
 using System.Windows.Automation;
+using System.Windows.Automation.Text;
 using Point = System.Windows.Point;
 
 namespace TyPoTaKer.Desktop.Services;
@@ -25,7 +26,7 @@ public static class CaretTracker
             return win32Info;
         }
 
-        // 2. Fallback path for modern apps (WPF, Chromium, Word): UI Automation bounds only
+        // 2. Fallback path for modern apps (WPF, Chromium, Word, Notepad): UI Automation bounds & text
         try
         {
             var focused = AutomationElement.FocusedElement;
@@ -52,12 +53,25 @@ public static class CaretTracker
                         if (rects != null && rects.Length > 0 && rects[0].Width >= 0)
                         {
                             var r = rects[0];
+                            string? extractedText = null;
+                            try
+                            {
+                                var range = selection[0].Clone();
+                                range.ExpandToEnclosingUnit(TextUnit.Line);
+                                string lineText = range.GetText(250);
+                                if (!string.IsNullOrWhiteSpace(lineText))
+                                {
+                                    extractedText = lineText;
+                                }
+                            }
+                            catch { }
+
                             return new CaretInfo
                             {
                                 IsVisible = true,
                                 ScreenPosition = new Point(r.Left, r.Bottom),
                                 CaretHeight = Math.Max(16, r.Height),
-                                SurroundingText = null, // Use fast keyboard hook buffer
+                                SurroundingText = extractedText,
                                 IsPassword = false
                             };
                         }

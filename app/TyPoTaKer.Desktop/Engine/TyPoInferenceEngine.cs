@@ -227,6 +227,15 @@ public sealed class TyPoInferenceEngine : IDisposable
             if (!string.IsNullOrEmpty(lastWord) && string.Equals(clean, lastWord, StringComparison.OrdinalIgnoreCase))
                 continue;
 
+            // Never suggest a common stop word if it was typed in the recent context (last 2 words)
+            if (recentWords.Length >= 2)
+            {
+                string secondLast = recentWords[^2].Trim(".,!?:;\"'()[]{}<>-/\\".ToCharArray()).ToLowerInvariant();
+                if (string.Equals(clean, secondLast, StringComparison.OrdinalIgnoreCase) &&
+                    (clean == "the" || clean == "a" || clean == "an" || clean == "is" || clean == "it" || clean == "to" || clean == "of" || clean == "in" || clean == "that"))
+                    continue;
+            }
+
             suggestions.Add(new AutocompleteSuggestion
             {
                 Text = clean,
@@ -650,7 +659,8 @@ public sealed class TyPoInferenceEngine : IDisposable
         string[] rawTokens = text.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
         if (rawTokens.Length < 2) return null;
 
-        for (int i = 0; i < rawTokens.Length - 1; i++)
+        // Search backwards from the end so we immediately catch stutters where the user is typing
+        for (int i = rawTokens.Length - 2; i >= 0; i--)
         {
             string w1 = rawTokens[i].Trim(".,!?:;\"'()[]{}<>-/\\".ToCharArray()).ToLowerInvariant();
             string w2 = rawTokens[i + 1].Trim(".,!?:;\"'()[]{}<>-/\\".ToCharArray()).ToLowerInvariant();

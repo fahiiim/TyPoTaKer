@@ -75,6 +75,26 @@ public sealed class KeyboardHook : IDisposable
         }
     }
 
+    public void UpdateBufferOnAccept(int backspaces, string insertion)
+    {
+        lock (_lock)
+        {
+            if (backspaces > 0)
+            {
+                int count = Math.Min(backspaces, _buffer.Length);
+                _buffer.Remove(_buffer.Length - count, count);
+            }
+            if (!string.IsNullOrEmpty(insertion))
+            {
+                _buffer.Append(insertion);
+            }
+            if (_buffer.Length > 250)
+            {
+                _buffer.Remove(0, _buffer.Length - 250);
+            }
+        }
+    }
+
     private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
     {
         if (nCode >= 0 && IsEnabled && !IsSimulating)
