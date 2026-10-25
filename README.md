@@ -7,6 +7,7 @@
 </p>
 
 <p align="center">
+  <a href="https://huggingface.co/fahiiim/TypoFormer"><img src="https://img.shields.io/badge/Hugging%20Face-fahiiim%2FTypoFormer-ffd21e?style=for-the-badge&logo=huggingface&logoColor=black" alt="Hugging Face Model"/></a>
   <img src="https://img.shields.io/badge/Model-TypoFormer--v2.4-4B5320?style=for-the-badge&logo=target&logoColor=white" alt="Model Version"/>
   <img src="https://img.shields.io/badge/Parameters-93.88M_INT8-556B2F?style=for-the-badge&logo=cpu&logoColor=white" alt="Parameters"/>
   <img src="https://img.shields.io/badge/Latency-Sub--10ms_CPU-708238?style=for-the-badge&logo=speedtest&logoColor=white" alt="Latency"/>
@@ -172,6 +173,38 @@ TypoFormer uses a staged growth architecture trained with curriculum scaling fro
 
 ## Deployment & Integration
 
+### Hugging Face Hub (Open-Weights & Python Inference)
+
+The complete open-weights distribution, tokenizers, config, and standalone ONNX inference engine are hosted on the Hugging Face Hub at [fahiiim/TypoFormer](https://huggingface.co/fahiiim/TypoFormer).
+
+Install runtime requirements:
+```bash
+pip install huggingface_hub onnxruntime tokenizers numpy
+```
+
+Run autocomplete and grammar correction directly in Python:
+```python
+import sys
+from huggingface_hub import snapshot_download
+
+# Download model repository snapshot
+repo_path = snapshot_download("fahiiim/TypoFormer")
+sys.path.insert(0, repo_path)
+from infer import TypoFormer
+
+# Initialize local engine
+model = TypoFormer(repo_path)
+
+# 1. Causal Next-Word Autocomplete (sub-10ms)
+suggestions = model.autocomplete("Could you please review the configuration file before the ", top_k=3)
+print("Suggestions:", suggestions)
+
+# 2. Non-Autoregressive Typo & Grammar Correction
+corrected = model.correct_grammar("This is teh wrong way to write.")
+print("Corrected:", corrected)
+```
+
+### Local ONNX Weights
 The production weights are exported to optimized **ONNX graphs** with symmetric INT8 quantization:
 
 * **Language Model Artifact**: `export/lm_stage2_int8.onnx` (138 MB)
