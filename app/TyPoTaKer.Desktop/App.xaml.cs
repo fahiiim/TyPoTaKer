@@ -144,15 +144,15 @@ public partial class App : System.Windows.Application
             _mouseHook.Start();
 
             _tray.ShowNotification(
-                "TyPoTaKer Active",
+                "TypoFormer Active",
                 "Ready for typing and right-click correction! Press Tab or Ctrl+Space to accept. Running in tray."
             );
         }
         catch (Exception ex)
         {
             System.Windows.MessageBox.Show(
-                $"Failed to start TyPoTaKer: {ex.Message}",
-                "TyPoTaKer Error",
+                $"Failed to start TypoFormer: {ex.Message}",
+                "TypoFormer Error",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error
             );

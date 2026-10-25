@@ -1,6 +1,10 @@
-# ⚡ TyPoTaKer — User Installation & Setup Guide
+<p align="center">
+  <img src="assets/typoformer_logo.png" alt="TypoFormer Logo" width="480"/>
+</p>
 
-**TyPoTaKer** is an ultra-fast, 100% local, offline AI keystroke companion and grammar engine for Windows. Powered by our custom **Stage 2 (94M parameter) ONNX INT8 Language Model & Edit-Tagging GEC**, TyPoTaKer provides Grammarly-grade real-time suggestions and zero-lag autocomplete anywhere in Windows in under **15 milliseconds** per keystroke without sending a single byte to the cloud.
+# ⚡ TypoFormer — User Installation & Setup Guide
+
+**TypoFormer** is an ultra-fast, 100% local, offline AI keystroke companion and grammar engine for Windows. Powered by our custom **Stage 2 (94M parameter) ONNX INT8 Language Model & Edit-Tagging GEC**, TypoFormer provides Grammarly-grade real-time suggestions and zero-lag autocomplete anywhere in Windows in under **15 milliseconds** per keystroke without sending a single byte to the cloud.
 
 ---
 
@@ -20,16 +24,16 @@
 
 ### Method 1: 1-Click Auto Installer (Recommended for End Users)
 
-The easiest way to install and integrate TyPoTaKer with your Windows desktop and Start Menu:
+The easiest way to install and integrate TypoFormer with your Windows desktop and Start Menu:
 
 1. Open the [`installer/`](file:///c:/Users/Md%20Fahim%20Sarker/Desktop/TyPoTaKer/installer) folder.
 2. Double-click **`Install.bat`** (or right-click and select **Run as Administrator** if your organization requires it).
 3. The installer will:
-   - Copy all application binaries, neural models, and tokenizers to `%LOCALAPPDATA%\Programs\TyPoTaKer`.
-   - Create a **Desktop Shortcut** (`TyPoTaKer.lnk`).
+   - Copy all application binaries, neural models, tokenizers, and icons to `%LOCALAPPDATA%\Programs\TypoFormer`.
+   - Create a **Desktop Shortcut** (`TypoFormer.lnk`) with the official TypoFormer icon.
    - Create a **Start Menu Shortcut** in Windows Programs.
    - Configure optional Windows logon auto-start.
-   - Automatically launch TyPoTaKer in your Windows System Tray.
+   - Automatically launch TypoFormer in your Windows System Tray.
 
 > [!TIP]
 > No administrator rights are required for normal users since it installs cleanly to your local user profile.
@@ -38,18 +42,18 @@ The easiest way to install and integrate TyPoTaKer with your Windows desktop and
 
 ### Method 2: Portable / Standalone Mode (Zero Installation)
 
-If you prefer to run TyPoTaKer portably (e.g. from a USB drive or without modifying your system):
+If you prefer to run TypoFormer portably (e.g. from a USB drive or without modifying your system):
 
 1. Navigate to:
    ```
    app\bin\publish\
    ```
 2. Double-click **`TyPoTaKer.Desktop.exe`**.
-3. TyPoTaKer will start immediately in your System Tray and begin monitoring keystrokes.
+3. TypoFormer will start immediately in your System Tray and begin monitoring keystrokes.
 
 ---
 
-## ⌨️ How to Use TyPoTaKer
+## ⌨️ How to Use TypoFormer
 
 ### 1. In-Line Typing Autocomplete
 * Open **Notepad**, **Microsoft Word**, **Google Docs**, **VS Code**, or any text field.
@@ -64,11 +68,11 @@ If you prefer to run TyPoTaKer portably (e.g. from a USB drive or without modify
 ### 2. Right-Click Instant Correction
 * Highlight any paragraph, sentence, or word in any application.
 * **Right-click** on the selected text.
-* TyPoTaKer scans the text through the GEC Neural Engine and presents the corrected version floating above your cursor.
+* TypoFormer scans the text through the GEC Neural Engine and presents the corrected version floating above your cursor.
 * Click the suggestion or press <kbd>Ctrl</kbd> + <kbd>Space</kbd> to replace the selection with the clean text.
 
 ### 3. Modern Control Dashboard
-Double-click the **TyPoTaKer icon** in the bottom-right Windows System Tray (or right-click the tray icon and choose **Open Dashboard...**):
+Double-click the **TypoFormer icon** in the bottom-right Windows System Tray (or right-click the tray icon and choose **Open Dashboard...**):
 * **Live Interactive Playground**: Type and test model suggestions without switching apps.
 * **Model Diagnostic Badges**: Verify Stage 2 INT8 LM and GEC loading status.
 * **Preferences**:
@@ -80,7 +84,7 @@ Double-click the **TyPoTaKer icon** in the bottom-right Windows System Tray (or 
 
 ## 🗑️ How to Uninstall
 
-If you ever wish to remove TyPoTaKer completely:
+If you ever wish to remove TypoFormer completely:
 
 1. Open the [`installer/`](file:///c:/Users/Md%20Fahim%20Sarker/Desktop/TyPoTaKer/installer) folder.
 2. Double-click **`Uninstall.bat`**.
@@ -91,7 +95,7 @@ If you ever wish to remove TyPoTaKer completely:
 ## 🛠️ Diagnostics & Troubleshooting
 
 * **Check Startup Logs**:
-  Look at `startup.log` inside `%LOCALAPPDATA%\Programs\TyPoTaKer\startup.log` (or `app\bin\publish\startup.log`).
+  Look at `startup.log` inside `%LOCALAPPDATA%\Programs\TypoFormer\startup.log` (or `app\bin\publish\startup.log`).
   It displays:
   ```
   LM: ...\export\lm_stage2_int8.onnx (Exists=True)
@@ -99,4 +103,4 @@ If you ever wish to remove TyPoTaKer completely:
   Maps: ...\edit_maps.json (Exists=True)
   ```
 * **Antivirus False Positives**:
-  Because TyPoTaKer uses Windows low-level keyboard hooks (`SetWindowsHookEx`) to detect caret typing boundaries across arbitrary applications, some strict security software may flag new unsigned binaries. If prompted, add an exclusion for `%LOCALAPPDATA%\Programs\TyPoTaKer\TyPoTaKer.Desktop.exe`.
+  Because TypoFormer uses Windows low-level keyboard hooks (`SetWindowsHookEx`) to detect caret typing boundaries across arbitrary applications, some strict security software may flag new unsigned binaries. If prompted, add an exclusion for `%LOCALAPPDATA%\Programs\TypoFormer\TyPoTaKer.Desktop.exe`.

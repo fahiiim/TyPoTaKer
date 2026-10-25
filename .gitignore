@@ -58,9 +58,10 @@ wandb/
 Thumbs.db
 desktop.ini
 
-# Caches
+# Caches & Scratch
 .hf_cache/
 .cache/
+scratch/
 *.log
 
 # .NET

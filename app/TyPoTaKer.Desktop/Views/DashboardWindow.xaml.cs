@@ -10,7 +10,7 @@ namespace TyPoTaKer.Desktop.Views;
 public partial class DashboardWindow : Window
 {
     private const string RUN_REG_KEY = @"Software\Microsoft\Windows\CurrentVersion\Run";
-    private const string APP_NAME = "TyPoTaKer";
+    private const string APP_NAME = "TypoFormer";
 
     public event EventHandler? ResetBufferRequested;
     public event EventHandler<bool>? TabAcceptToggled;

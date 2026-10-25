@@ -62,16 +62,27 @@ public sealed class TrayManager : IDisposable
 
         contextMenu.Items.Add(new ToolStripSeparator());
 
-        var exitItem = new ToolStripMenuItem("Exit TyPoTaKer", null, (s, e) =>
+        var exitItem = new ToolStripMenuItem("Exit TypoFormer", null, (s, e) =>
         {
             ExitRequested?.Invoke(this, EventArgs.Empty);
         });
         contextMenu.Items.Add(exitItem);
 
+        Icon trayIcon = SystemIcons.Information;
+        try
+        {
+            string icoPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "typoformer.ico");
+            if (System.IO.File.Exists(icoPath))
+            {
+                trayIcon = new Icon(icoPath);
+            }
+        }
+        catch { }
+
         _notifyIcon = new NotifyIcon
         {
-            Icon = SystemIcons.Information,
-            Text = "TyPoTaKer — AI Keystroke Companion",
+            Icon = trayIcon,
+            Text = "TypoFormer — AI Keystroke Companion",
             ContextMenuStrip = contextMenu,
             Visible = true
         };
