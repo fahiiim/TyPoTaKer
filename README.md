@@ -102,7 +102,7 @@ TypoFormer prevents this tokenization distortion through a hybrid input represen
 2. **Byte Sequence Convolutions**: Concurrently, the exact UTF-8 character bytes of each token are fed into 4 parallel 1D convolutional banks with kernel sizes $`k \in \{2, 3, 5, 8\}`$:
 
 $$
-\mathbf{C}_k = \operatorname{MaxPool}\left(\operatorname{ReLU}\left(\operatorname{Conv1D}_k(\text{Bytes})\right)\right)
+\mathbf{C}_k = \mathrm{MaxPool}\left(\mathrm{ReLU}\left(\mathrm{Conv1D}_k(\text{Bytes})\right)\right)
 $$
 
 3. **Adaptive Highway Gating**: A learned per-dimension sigmoid gate $`\alpha \in [0, 1]`$ balances the semantic subword vector $`\mathbf{E}_{\text{bpe}}`$ and the sub-character morphological feature $`\mathbf{E}_{\text{char}}`$:
@@ -129,7 +129,7 @@ $$
 * **SwiGLU Non-Linearity**: Replaces legacy GeLU with a gated linear unit driven by the Swish activation function:
 
 $$
-\operatorname{SwiGLU}(\mathbf{x}) = \left(\mathbf{x}\mathbf{W}_{\text{gate}} \cdot \operatorname{sigmoid}(\beta \mathbf{x}\mathbf{W}_{\text{gate}})\right) \otimes (\mathbf{x}\mathbf{W}_{\text{up}}) \mathbf{W}_{\text{down}}
+\mathrm{SwiGLU}(\mathbf{x}) = \left(\mathbf{x}\mathbf{W}_{\text{gate}} \cdot \mathrm{sigmoid}(\beta \mathbf{x}\mathbf{W}_{\text{gate}})\right) \otimes (\mathbf{x}\mathbf{W}_{\text{up}}) \mathbf{W}_{\text{down}}
 $$
 
 * **Pre-RMSNorm**: Normalizes layer inputs using Root Mean Square statistics without mean-centering offsets, avoiding floating-point drift and stabilizing FP16/INT8 weight quantization.
@@ -142,7 +142,7 @@ TypoFormer dynamically alters its attention matrix based on the runtime task:
 * **Inference Task: Next-Word Autocomplete (Causal Mode)**:
 
 $$
-\mathbf{M}_{i, j} = \begin{cases} 0 & \text{if } j \le i \\ -\infty & \text{if } j > i \end{cases}
+\mathbf{M}_{i, j} = \begin{cases} 0 & \text{if } j \le i \\\\ -\infty & \text{if } j > i \end{cases}
 $$
 
 The model attends strictly to preceding tokens, generating next-word logits in a single causal forward pass.
@@ -178,7 +178,7 @@ Unlike sequence-to-sequence models (e.g., T5 or BART) that rewrite entire senten
 To prevent false-positive overcorrections on creative or informal writing, edits are gated by a precision margin $`\tau`$:
 
 $$
-\operatorname{Action}(t_i) = \begin{cases} a^* & \text{if } P(a^* \mid \mathbf{h}_i) > P(\text{KEEP} \mid \mathbf{h}_i) + \tau \\ \text{KEEP} & \text{otherwise} \end{cases}
+\mathrm{Action}(t_i) = \begin{cases} a^* & \text{if } P(a^* \mid \mathbf{h}_i) > P(\text{KEEP} \mid \mathbf{h}_i) + \tau \\\\ \text{KEEP} & \text{otherwise} \end{cases}
 $$
 
 *Result*: TypoFormer achieves a **99.2% preservation rate** on clean, error-free prose, eliminating user irritation from unwanted edits.
