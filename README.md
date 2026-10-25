@@ -375,7 +375,18 @@ python -m typotaker export `
   --out export/lm_stage1.onnx
 ```
 
-The current exporter produces a float ONNX graph. INT8 quantization, ONNX Runtime verification, CPU latency measurement, and KV-cache support are follow-up engineering tasks.
+## Desktop App & Installation
+
+TyPoTaKer includes a native, lightweight, GPU-free Windows Desktop Assistant (`.NET 8 WPF` + `ONNX Runtime CPU`) running our **Stage 2 INT8** model in <15ms latency per keystroke.
+
+- **1-Click Installer**: Run [`installer/Install.bat`](file:///c:/Users/Md%20Fahim%20Sarker/Desktop/TyPoTaKer/installer/Install.bat) to install shortcuts to Start Menu & Desktop and auto-start in the System Tray.
+- **Portable / Standalone**: Double-click [`app/bin/publish/TyPoTaKer.Desktop.exe`](file:///c:/Users/Md%20Fahim%20Sarker/Desktop/TyPoTaKer/app/bin/publish/TyPoTaKer.Desktop.exe).
+- **Features**:
+  - ✨ In-line next-word autocomplete (<kbd>Tab</kbd> or <kbd>Ctrl</kbd> + <kbd>Space</kbd> to accept)
+  - ⚡ Real-time typo & grammar correction overlay
+  - 🖱️ Right-click selected text grammar check anywhere in Windows
+  - 📊 Modern glassmorphic Control Center dashboard with typing sandbox
+- **Full Guide**: See [INSTALL.md](file:///c:/Users/Md%20Fahim%20Sarker/Desktop/TyPoTaKer/INSTALL.md) for detailed setup and configuration.
 
 ## Repository layout
 

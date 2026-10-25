@@ -11,6 +11,7 @@ public sealed class TrayManager : IDisposable
 
     public event EventHandler<bool>? EnabledToggled;
     public event EventHandler? ResetRequested;
+    public event EventHandler? DashboardRequested;
     public event EventHandler? ExitRequested;
 
     public bool IsEnabled
@@ -23,12 +24,14 @@ public sealed class TrayManager : IDisposable
     {
         var contextMenu = new ContextMenuStrip();
 
-        var header = new ToolStripMenuItem("TyPoTaKer Assistant")
+        var dashboardItem = new ToolStripMenuItem("Open Dashboard...", null, (s, e) =>
         {
-            Enabled = false,
+            DashboardRequested?.Invoke(this, EventArgs.Empty);
+        })
+        {
             Font = new Font(Control.DefaultFont, FontStyle.Bold)
         };
-        contextMenu.Items.Add(header);
+        contextMenu.Items.Add(dashboardItem);
 
         contextMenu.Items.Add(new ToolStripSeparator());
 
@@ -51,7 +54,7 @@ public sealed class TrayManager : IDisposable
 
         contextMenu.Items.Add(new ToolStripSeparator());
 
-        var infoItem = new ToolStripMenuItem("Models: LM INT8 (43MB) + GEC INT8 (37MB)")
+        var infoItem = new ToolStripMenuItem("Models: Stage 2 v4 (94M INT8 LM + GEC)")
         {
             Enabled = false
         };
@@ -71,6 +74,10 @@ public sealed class TrayManager : IDisposable
             Text = "TyPoTaKer — AI Keystroke Companion",
             ContextMenuStrip = contextMenu,
             Visible = true
+        };
+        _notifyIcon.DoubleClick += (s, e) =>
+        {
+            DashboardRequested?.Invoke(this, EventArgs.Empty);
         };
     }
 

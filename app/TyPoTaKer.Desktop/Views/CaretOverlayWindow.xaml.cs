@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using Point = System.Windows.Point;
 using Brush = System.Windows.Media.Brush;
@@ -30,6 +31,7 @@ public partial class CaretOverlayWindow : Window
     private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
 
     private readonly DispatcherTimer _autoHideTimer;
+    private bool _isClosingAnimation = false;
 
     public event EventHandler? DismissClicked;
     public event EventHandler? SuggestionAccepted;
@@ -38,6 +40,7 @@ public partial class CaretOverlayWindow : Window
     public int CurrentBackspaces { get; private set; } = 0;
     public bool IsSelectionReplacement { get; private set; } = false;
     public bool HasActiveSuggestion { get; private set; } = false;
+    public bool AllowTabAccept { get; set; } = true;
 
     public CaretOverlayWindow()
     {
@@ -56,7 +59,7 @@ public partial class CaretOverlayWindow : Window
     {
         base.OnSourceInitialized(e);
 
-        // Ensure this overlay window never steals keyboard focus from active document
+        // Ensure this overlay window never steals keyboard focus from the active document
         var helper = new WindowInteropHelper(this);
         int exStyle = GetWindowLong(helper.Handle, GWL_EXSTYLE);
         SetWindowLong(helper.Handle, GWL_EXSTYLE, exStyle | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW);
@@ -74,6 +77,7 @@ public partial class CaretOverlayWindow : Window
     {
         Dispatcher.Invoke(() =>
         {
+            _isClosingAnimation = false;
             CurrentInsertion = insertionText;
             CurrentBackspaces = backspaces;
             IsSelectionReplacement = isSelectionReplacement;
@@ -81,6 +85,7 @@ public partial class CaretOverlayWindow : Window
 
             SuggestionText.Text = displayLabel;
             HotkeyBadge.Visibility = Visibility.Visible;
+            HotkeyText.Text = AllowTabAccept ? "Tab ⇥" : "Ctrl + Space";
 
             var bc = new BrushConverter();
             switch (badgeType)
@@ -89,13 +94,11 @@ public partial class CaretOverlayWindow : Window
                     ModeBadge.Background = (Brush)bc.ConvertFromString("#10B981")!;
                     ModeText.Text = "⚡ FIX";
                     PillBorder.BorderBrush = (Brush)bc.ConvertFromString("#34D399")!;
-                    HotkeyText.Text = "Ctrl + Space";
                     break;
                 case SuggestionBadgeType.Next:
                     ModeBadge.Background = (Brush)bc.ConvertFromString("#6366F1")!;
                     ModeText.Text = "✨ NEXT";
                     PillBorder.BorderBrush = (Brush)bc.ConvertFromString("#818CF8")!;
-                    HotkeyText.Text = "Ctrl + Space";
                     break;
                 case SuggestionBadgeType.Clean:
                     ModeBadge.Background = (Brush)bc.ConvertFromString("#059669")!;
@@ -105,35 +108,61 @@ public partial class CaretOverlayWindow : Window
                     break;
             }
 
-            // Calculate position
-            double targetX = screenPos.X;
-            double targetY = isAbovePosition
-                ? (screenPos.Y - 45) // Float slightly above cursor/menu
-                : (screenPos.Y + heightOffset + 4); // Float below caret
+            // Convert physical screen pixels to WPF device-independent pixels (DIPs)
+            var source = PresentationSource.FromVisual(this);
+            double dpiX = source?.CompositionTarget?.TransformToDevice.M11 ?? 1.0;
+            double dpiY = source?.CompositionTarget?.TransformToDevice.M22 ?? 1.0;
 
-            // Clamping to screen boundaries
+            double dipX = screenPos.X / dpiX;
+            double dipY = screenPos.Y / dpiY;
+            double dipHeight = heightOffset / dpiY;
+
+            // Positioning relative to caret
+            double targetX = dipX;
+            double targetY = isAbovePosition
+                ? (dipY - 48) // Float slightly above cursor/menu
+                : (dipY + dipHeight + 4); // Float below caret
+
+            // Clamping to current screen work area
             double screenW = SystemParameters.PrimaryScreenWidth;
             double screenH = SystemParameters.PrimaryScreenHeight;
 
-            if (targetX + 320 > screenW)
-                targetX = Math.Max(10, screenW - 340);
+            if (targetX + 340 > screenW)
+                targetX = Math.Max(10, screenW - 350);
             if (targetY + 60 > screenH)
-                targetY = Math.Max(10, screenPos.Y - 45);
+                targetY = Math.Max(10, dipY - 48);
             if (targetY < 10)
-                targetY = Math.Min(screenH - 60, screenPos.Y + 28);
+                targetY = Math.Min(screenH - 60, dipY + 28);
 
             Left = Math.Max(10, targetX);
             Top = Math.Max(10, targetY);
 
             Show();
 
-            // Set auto-hide interval (1.8s for clean status, 5s for suggestions)
+            // Trigger smooth spring fade-in animation
+            AnimateShow();
+
+            // Auto-hide timer
             _autoHideTimer.Stop();
             _autoHideTimer.Interval = (badgeType == SuggestionBadgeType.Clean)
                 ? TimeSpan.FromSeconds(1.8)
                 : TimeSpan.FromSeconds(5.0);
             _autoHideTimer.Start();
         });
+    }
+
+    private void AnimateShow()
+    {
+        var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+
+        var opacityAnim = new DoubleAnimation(0.0, 1.0, TimeSpan.FromMilliseconds(130)) { EasingFunction = ease };
+        var scaleAnim = new DoubleAnimation(0.94, 1.0, TimeSpan.FromMilliseconds(150)) { EasingFunction = ease };
+        var translateAnim = new DoubleAnimation(4.0, 0.0, TimeSpan.FromMilliseconds(150)) { EasingFunction = ease };
+
+        RootContainer.BeginAnimation(OpacityProperty, opacityAnim);
+        OverlayScale.BeginAnimation(ScaleTransform.ScaleXProperty, scaleAnim);
+        OverlayScale.BeginAnimation(ScaleTransform.ScaleYProperty, scaleAnim);
+        OverlayTranslate.BeginAnimation(TranslateTransform.YProperty, translateAnim);
     }
 
     public void ShowCleanStatus(Point screenPos, string message = "0 changes needed")
@@ -154,12 +183,30 @@ public partial class CaretOverlayWindow : Window
     {
         Dispatcher.Invoke(() =>
         {
+            if (_isClosingAnimation || !IsVisible) return;
+            _isClosingAnimation = true;
             _autoHideTimer.Stop();
             HasActiveSuggestion = false;
-            CurrentInsertion = string.Empty;
-            CurrentBackspaces = 0;
-            IsSelectionReplacement = false;
-            Hide();
+
+            var ease = new CubicEase { EasingMode = EasingMode.EaseIn };
+            var opacityAnim = new DoubleAnimation(RootContainer.Opacity, 0.0, TimeSpan.FromMilliseconds(90))
+            {
+                EasingFunction = ease
+            };
+
+            opacityAnim.Completed += (s, e) =>
+            {
+                if (_isClosingAnimation)
+                {
+                    CurrentInsertion = string.Empty;
+                    CurrentBackspaces = 0;
+                    IsSelectionReplacement = false;
+                    Hide();
+                    _isClosingAnimation = false;
+                }
+            };
+
+            RootContainer.BeginAnimation(OpacityProperty, opacityAnim);
         });
     }
 

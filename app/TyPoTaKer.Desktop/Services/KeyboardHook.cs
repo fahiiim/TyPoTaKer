@@ -95,6 +95,9 @@ public sealed class KeyboardHook : IDisposable
         }
     }
 
+    private IntPtr _lastHwnd = IntPtr.Zero;
+    public Func<bool>? HasActiveSuggestionPredicate { get; set; }
+
     private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
     {
         if (nCode >= 0 && IsEnabled && !IsSimulating)
@@ -106,11 +109,23 @@ public sealed class KeyboardHook : IDisposable
                 uint vk = kbd.vkCode;
                 bool isCtrl = (Win32Native.GetAsyncKeyState(Win32Native.VK_CONTROL) & 0x8000) != 0;
 
-                // 1. Accept Hotkey: Ctrl + Space
-                if (isCtrl && vk == Win32Native.VK_SPACE)
+                // Clear typing buffer when user switches active windows
+                IntPtr fgHwnd = Win32Native.GetForegroundWindow();
+                if (fgHwnd != IntPtr.Zero && fgHwnd != _lastHwnd)
+                {
+                    _lastHwnd = fgHwnd;
+                    lock (_lock)
+                    {
+                        _buffer.Clear();
+                    }
+                }
+
+                // 1. Accept Hotkey: Tab (when suggestion is active) or Ctrl + Space
+                if ((isCtrl && vk == Win32Native.VK_SPACE) ||
+                    (vk == 0x09 && !isCtrl && HasActiveSuggestionPredicate?.Invoke() == true))
                 {
                     AcceptRequested?.Invoke(this, EventArgs.Empty);
-                    return (IntPtr)1; // Consume space key
+                    return (IntPtr)1; // Consume key
                 }
 
                 // 2. Dismiss Hotkey: Escape

@@ -15,6 +15,7 @@ public partial class App : System.Windows.Application
 {
     private TyPoInferenceEngine? _engine;
     private CaretOverlayWindow? _overlay;
+    private DashboardWindow? _dashboard;
     private KeyboardHook? _hook;
     private MouseHook? _mouseHook;
     private TrayManager? _tray;
@@ -61,9 +62,13 @@ public partial class App : System.Windows.Application
         {
             _engine = new TyPoInferenceEngine(vocab, merges, lm, gec, maps);
             _overlay = new CaretOverlayWindow();
+            _dashboard = new DashboardWindow();
             _hook = new KeyboardHook();
             _mouseHook = new MouseHook();
             _tray = new TrayManager();
+
+            // Intercept Tab acceptance when an active suggestion is visible and Tab accept is enabled
+            _hook.HasActiveSuggestionPredicate = () => _overlay?.HasActiveSuggestion == true && _overlay.AllowTabAccept;
 
             // 60ms fast typing debouncer for snappy response
             _debounceTimer = new System.Timers.Timer(60) { AutoReset = false };
@@ -88,6 +93,31 @@ public partial class App : System.Windows.Application
             {
                 if (_hook != null) _hook.IsDismissed = true;
                 _overlay.HideOverlay();
+            };
+
+            _tray.DashboardRequested += (s, args) =>
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    if (_dashboard != null)
+                    {
+                        _dashboard.Show();
+                        _dashboard.WindowState = WindowState.Normal;
+                        _dashboard.Activate();
+                    }
+                });
+            };
+
+            _dashboard.TabAcceptToggled += (s, allowed) =>
+            {
+                if (_overlay != null) _overlay.AllowTabAccept = allowed;
+            };
+
+            _dashboard.ResetBufferRequested += (s, args) =>
+            {
+                _hook?.ClearBuffer();
+                _overlay?.HideOverlay();
+                _tray.ShowNotification("Buffer Reset", "Context buffer wiped from Dashboard.");
             };
 
             _tray.EnabledToggled += (s, enabled) =>
@@ -115,7 +145,7 @@ public partial class App : System.Windows.Application
 
             _tray.ShowNotification(
                 "TyPoTaKer Active",
-                "Ready for typing and right-click correction! Press Ctrl+Space to accept. Running in tray."
+                "Ready for typing and right-click correction! Press Tab or Ctrl+Space to accept. Running in tray."
             );
         }
         catch (Exception ex)
@@ -398,13 +428,23 @@ public partial class App : System.Windows.Application
         _mouseHook?.Dispose();
         _tray?.Dispose();
         _engine?.Dispose();
+        try { _dashboard?.Close(); } catch { }
         base.OnExit(e);
     }
 
     private static string FindWorkspaceRoot()
     {
-        // 1. Search upwards from BaseDirectory for repository root containing pyproject.toml
-        var dir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
+        string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+
+        // 1. If self-contained models and tokenizers exist right next to the executable, use BaseDirectory
+        if (File.Exists(Path.Combine(baseDir, @"export\lm_stage2_int8.onnx")) &&
+            File.Exists(Path.Combine(baseDir, @"data\tokenizer\vocab.json")))
+        {
+            return baseDir;
+        }
+
+        // 2. Search upwards from BaseDirectory for repository root containing pyproject.toml
+        var dir = new DirectoryInfo(baseDir);
         while (dir != null)
         {
             if (File.Exists(Path.Combine(dir.FullName, "pyproject.toml")) &&
@@ -415,7 +455,7 @@ public partial class App : System.Windows.Application
             dir = dir.Parent;
         }
 
-        // 2. Current working directory
+        // 3. Current working directory
         string current = Directory.GetCurrentDirectory();
         if (File.Exists(Path.Combine(current, "pyproject.toml")) &&
             Directory.Exists(Path.Combine(current, "export")))
@@ -427,6 +467,6 @@ public partial class App : System.Windows.Application
         if (File.Exists(Path.Combine(desktopPath, "pyproject.toml")))
             return desktopPath;
 
-        return AppDomain.CurrentDomain.BaseDirectory;
+        return baseDir;
     }
 }

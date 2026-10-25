@@ -13,42 +13,49 @@
         ResizeMode="NoResize">
 
     <Window.Resources>
-        <!-- Dropshadow effect -->
+        <!-- Deep Soft Glow Shadow -->
         <DropShadowEffect x:Key="GlowShadow"
                           Color="#000000"
-                          BlurRadius="18"
-                          ShadowDepth="4"
-                          Opacity="0.55" />
+                          BlurRadius="24"
+                          ShadowDepth="5"
+                          Opacity="0.65" />
     </Window.Resources>
 
-    <Grid Margin="12">
+    <Grid Margin="16" x:Name="RootContainer" Opacity="0">
+        <Grid.RenderTransform>
+            <TransformGroup>
+                <ScaleTransform x:Name="OverlayScale" ScaleX="0.95" ScaleY="0.95" />
+                <TranslateTransform x:Name="OverlayTranslate" Y="4" />
+            </TransformGroup>
+        </Grid.RenderTransform>
+
         <Border x:Name="PillBorder"
-                Background="#EE111622"
-                BorderBrush="#38BDF8"
-                BorderThickness="1.2"
-                CornerRadius="9"
+                Background="#F00F172A"
+                BorderBrush="#6366F1"
+                BorderThickness="1.4"
+                CornerRadius="10"
                 Effect="{StaticResource GlowShadow}"
                 Padding="10,6,12,6">
 
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <!-- Clickable Suggestion / Action area -->
+                <!-- Clickable Suggestion Area -->
                 <StackPanel x:Name="ContentArea"
                             Orientation="Horizontal"
                             VerticalAlignment="Center"
                             Cursor="Hand"
-                            ToolTip="Click to apply"
+                            ToolTip="Click or press Tab / Ctrl+Space to apply"
                             MouseLeftButtonDown="OnContentClick">
 
-                    <!-- Badge (Mode Indicator) -->
+                    <!-- Badge (Fix vs Next vs Clean) -->
                     <Border x:Name="ModeBadge"
-                            CornerRadius="5"
-                            Padding="6,2"
-                            Margin="0,0,8,0"
+                            CornerRadius="6"
+                            Padding="7,2.5"
+                            Margin="0,0,9,0"
                             Background="#6366F1">
                         <TextBlock x:Name="ModeText"
                                    Text="✨ NEXT"
                                    FontFamily="Segoe UI"
-                                   FontSize="10.5"
+                                   FontSize="11"
                                    FontWeight="Bold"
                                    Foreground="#FFFFFF" />
                     </Border>
@@ -57,46 +64,46 @@
                     <TextBlock x:Name="SuggestionText"
                                Text="suggestion"
                                FontFamily="Segoe UI Variable Text, Segoe UI, sans-serif"
-                               FontSize="13.5"
-                               FontWeight="Medium"
+                               FontSize="14"
+                               FontWeight="SemiBold"
                                Foreground="#F8FAFC"
                                VerticalAlignment="Center"
-                               Margin="0,0,10,0" />
+                               Margin="0,0,12,0" />
 
-                    <!-- Hotkey acceptance hint pill -->
+                    <!-- Hotkey Acceptance Badge -->
                     <Border x:Name="HotkeyBadge"
                             Background="#1E293B"
-                            BorderBrush="#334155"
+                            BorderBrush="#475569"
                             BorderThickness="1"
-                            CornerRadius="4"
-                            Padding="5,1"
+                            CornerRadius="5"
+                            Padding="6,2"
                             Margin="0,0,8,0"
                             VerticalAlignment="Center">
                         <TextBlock x:Name="HotkeyText"
-                                   Text="Ctrl + Space"
-                                   FontFamily="Consolas, Segoe UI"
-                                   FontSize="10"
-                                   FontWeight="SemiBold"
-                                   Foreground="#94A3B8" />
+                                   Text="Tab ⇥"
+                                   FontFamily="Segoe UI Variable Small, Consolas, Segoe UI"
+                                   FontSize="10.5"
+                                   FontWeight="Bold"
+                                   Foreground="#CBD5E1" />
                     </Border>
                 </StackPanel>
 
-                <!-- Dismiss Button (✕) -->
+                <!-- Dismiss Button (✕ Esc) -->
                 <Border x:Name="DismissButton"
-                        Background="#261E293B"
+                        Background="#1E293B"
                         BorderBrush="#334155"
                         BorderThickness="1"
-                        CornerRadius="4"
-                        Padding="5,1"
+                        CornerRadius="5"
+                        Padding="6,2"
                         Cursor="Hand"
                         VerticalAlignment="Center"
                         ToolTip="Dismiss (Esc)"
                         MouseLeftButtonDown="OnDismissClick">
                     <TextBlock Text="✕ Esc"
-                               FontFamily="Consolas, Segoe UI"
-                               FontSize="9.5"
-                               FontWeight="Bold"
-                               Foreground="#64748B"
+                               FontFamily="Segoe UI Variable Small, Consolas, Segoe UI"
+                               FontSize="10"
+                               FontWeight="SemiBold"
+                               Foreground="#94A3B8"
                                VerticalAlignment="Center" />
                 </Border>
             </StackPanel>
