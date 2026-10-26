@@ -31,17 +31,30 @@ if ($env:PROCESSOR_ARCHITECTURE -ne "AMD64" -and $env:PROCESSOR_ARCHITEW6432 -ne
 Write-Host "[1/5] Checking for running instances..." -ForegroundColor White
 Get-Process -Name "TyPoTaKer*", "TypoFormer*" -ErrorAction SilentlyContinue | ForEach-Object {
     Write-Host "      Closing process $($_.Name) (PID: $($_.Id))..." -ForegroundColor Gray
-    try {
-        Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
-    } catch { }
-    taskkill /F /PID $_.Id 2>$null | Out-Null
+    try { $_.CloseMainWindow() | Out-Null } catch { }
+    try { Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue } catch { }
+    cmd /c "taskkill /F /PID $($_.Id) >nul 2>&1"
 }
-Start-Sleep -Milliseconds 500
+Start-Sleep -Milliseconds 400
 
 # 3. Setup Target Installation Directory
 $InstallDir = Join-Path $env:LOCALAPPDATA "Programs\TypoFormer"
 if (-not (Test-Path $InstallDir)) {
     New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
+}
+
+# Check if target executable is locked by an elevated process
+$TargetExe = Join-Path $InstallDir "TyPoTaKer.Desktop.exe"
+if (Test-Path $TargetExe) {
+    try {
+        $testStream = [System.IO.File]::Open($TargetExe, [System.IO.FileMode]::Open, [System.IO.FileAccess]::ReadWrite)
+        $testStream.Close()
+        $testStream.Dispose()
+    } catch {
+        Write-Host "      [Notice] TypoFormer is running with elevated permissions." -ForegroundColor Yellow
+        Write-Host "      Please right-click the TypoFormer tray icon and click 'Exit' before reinstalling," -ForegroundColor Yellow
+        Write-Host "      or run this PowerShell installer as Administrator." -ForegroundColor Yellow
+    }
 }
 
 # 4. Acquire Application Files
