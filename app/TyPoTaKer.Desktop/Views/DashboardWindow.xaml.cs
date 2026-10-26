@@ -156,10 +156,20 @@ public partial class DashboardWindow : Window
 
                 var candidates = new List<(string Original, string Replacement, string Action, string Category)>();
 
-                // 1. Sentence Capitalization Analysis
+                // 1. Rule Engine: Capitalization, Mid-Sentence Caps ("Never" -> "never"), Slang/Informal ("Gonna" -> "going to"), Typos
+                var ruleEdits = GrammarRuleEngine.FindRuleEdits(plainText);
+                foreach (var re in ruleEdits)
+                {
+                    if (!candidates.Any(c => c.Original.Equals(re.Original, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        candidates.Add((re.Original, re.Replacement, re.ActionDescription, re.Category));
+                    }
+                }
+
+                // 2. Sentence Capitalization Analysis (Sentence Boundaries)
                 AnalyzeCapitalization(plainText, candidates);
 
-                // 2. GEC & Typo Analysis with TyPoInferenceEngine
+                // 3. GEC & Typo Analysis with TyPoInferenceEngine
                 if (_engine != null)
                 {
                     var sentences = plainText.Split(new[] { '.', '!', '?', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
@@ -180,7 +190,7 @@ public partial class DashboardWindow : Window
                                 if (string.IsNullOrEmpty(o) || string.IsNullOrEmpty(r) || o.Equals(r, StringComparison.OrdinalIgnoreCase))
                                     continue;
 
-                                // Avoid duplicate if already caught by capitalization
+                                // Avoid duplicate if already caught by rules
                                 if (candidates.Any(c => c.Original.Equals(o, StringComparison.OrdinalIgnoreCase)))
                                     continue;
 
@@ -189,13 +199,6 @@ public partial class DashboardWindow : Window
                             }
                         }
                     }
-                }
-
-                // 3. Fallback heuristic check for screenshot tokens: "this", "but", "si"
-                if (!candidates.Any(c => c.Original.Equals("si", StringComparison.OrdinalIgnoreCase)) &&
-                    plainText.IndexOf(" si ", StringComparison.OrdinalIgnoreCase) >= 0)
-                {
-                    candidates.Add(("si", "is", "Change the verb tense", "Grammar"));
                 }
 
                 if (ct.IsCancellationRequested) return;

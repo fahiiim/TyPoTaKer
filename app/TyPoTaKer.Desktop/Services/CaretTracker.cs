@@ -77,12 +77,60 @@ public static class CaretTracker
                         }
                     }
                 }
+                // 3. Fallback: Focused element bounding rectangle
+                var elemRect = focused.Current.BoundingRectangle;
+                if (!elemRect.IsEmpty && elemRect.Width > 20 && elemRect.Height > 10)
+                {
+                    return new CaretInfo
+                    {
+                        IsVisible = true,
+                        ScreenPosition = new Point(elemRect.Left + 24, elemRect.Top + 36),
+                        CaretHeight = 20,
+                        SurroundingText = null,
+                        IsPassword = false
+                    };
+                }
             }
         }
         catch
         {
             // COM exceptions when switching windows
         }
+
+        // 4. Fallback: Foreground window bounding rectangle or cursor position
+        try
+        {
+            IntPtr fgHwnd = Win32Native.GetForegroundWindow();
+            if (fgHwnd != IntPtr.Zero && Win32Native.GetWindowRect(fgHwnd, out var wRect))
+            {
+                if (wRect.Right - wRect.Left > 60 && wRect.Bottom - wRect.Top > 60)
+                {
+                    if (Win32Native.GetCursorPos(out var mousePt) &&
+                        mousePt.X >= wRect.Left && mousePt.X <= wRect.Right &&
+                        mousePt.Y >= wRect.Top && mousePt.Y <= wRect.Bottom)
+                    {
+                        return new CaretInfo
+                        {
+                            IsVisible = true,
+                            ScreenPosition = new Point(mousePt.X, mousePt.Y + 16),
+                            CaretHeight = 20,
+                            SurroundingText = null,
+                            IsPassword = false
+                        };
+                    }
+
+                    return new CaretInfo
+                    {
+                        IsVisible = true,
+                        ScreenPosition = new Point(wRect.Left + 50, wRect.Top + 80),
+                        CaretHeight = 20,
+                        SurroundingText = null,
+                        IsPassword = false
+                    };
+                }
+            }
+        }
+        catch { }
 
         return win32Info;
     }

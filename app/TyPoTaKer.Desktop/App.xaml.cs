@@ -210,75 +210,98 @@ public partial class App : System.Windows.Application
             return;
         }
 
-        char lastChar = rawText[rawText.Length - 1];
-        bool isWordBoundary = char.IsWhiteSpace(lastChar) || char.IsPunctuation(lastChar);
+        if (ct.IsCancellationRequested) return;
 
-        // Only offer typing suggestions when a word, sentence, or line has been completed
-        if (!isWordBoundary)
+        // 1. High-Priority: Check Grammar Rule Engine (Mid-sentence caps, contractions, informal words, common typos)
+        var ruleEdits = GrammarRuleEngine.FindRuleEdits(activeSentence);
+
+        // 2. Check Neural GEC Engine
+        var gecResult = _engine.CorrectSentence(activeSentence, minEditProb: 0.40f, editMargin: 0.04f);
+
+        // Combine rule edits and neural GEC edits without duplicate keys
+        var combinedEdits = new System.Collections.Generic.List<(string Original, string Replacement, string Action)>();
+        foreach (var re in ruleEdits)
         {
+            if (!combinedEdits.Any(e => e.Original.Equals(re.Original, StringComparison.OrdinalIgnoreCase)))
+            {
+                combinedEdits.Add((re.Original, re.Replacement, re.ActionDescription));
+            }
+        }
+
+        if (gecResult.HasCorrection && gecResult.Edits.Count > 0)
+        {
+            foreach (var ge in gecResult.Edits)
+            {
+                string o = ge.Original.Trim(".,!?:;\"'()[]{}<>-/\\".ToCharArray());
+                string r = ge.Replacement.Trim(".,!?:;\"'()[]{}<>-/\\".ToCharArray());
+                if (!string.IsNullOrEmpty(o) && !string.IsNullOrEmpty(r) && !o.Equals(r, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (!combinedEdits.Any(e => e.Original.Equals(o, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        combinedEdits.Add((o, r, "Correct grammar"));
+                    }
+                }
+            }
+        }
+
+        if (combinedEdits.Count == 0)
+        {
+            // No error detected: ensure overlay remains hidden so no intrusive UI tab pops up
             Dispatcher.Invoke(() => _overlay?.HideOverlay());
             return;
         }
 
         if (ct.IsCancellationRequested) return;
 
-        // 1. High-Priority: Check GEC grammar and typo corrections on the active sentence/phrase
-        var gecResult = _engine.CorrectSentence(activeSentence, minEditProb: 0.65f, editMargin: 0.08f);
-        if (gecResult.HasCorrection && gecResult.Edits.Count > 0)
+        // Single word correction: target ONLY the mistyped word at its exact position
+        if (combinedEdits.Count == 1)
         {
-            if (ct.IsCancellationRequested) return;
+            var edit = combinedEdits[0];
+            string orig = edit.Original;
+            string repl = edit.Replacement;
 
-            // Single word correction: target ONLY the mistyped word
-            if (gecResult.Edits.Count == 1)
+            int lastOrigIdx = activeSentence.LastIndexOf(orig, StringComparison.OrdinalIgnoreCase);
+            if (lastOrigIdx >= 0)
             {
-                var edit = gecResult.Edits[0];
-                string orig = edit.Original.Trim();
-                string repl = edit.Replacement.Trim();
+                int backspaces = activeSentence.Length - lastOrigIdx;
+                string trailing = activeSentence.Substring(lastOrigIdx + orig.Length);
+                string insertion = repl + trailing;
+                string displayLabel = $"{orig} → {repl}";
 
-                if (!string.IsNullOrEmpty(orig) && !string.IsNullOrEmpty(repl) && !string.Equals(orig, repl, StringComparison.OrdinalIgnoreCase))
-                {
-                    int lastOrigIdx = activeSentence.LastIndexOf(orig, StringComparison.OrdinalIgnoreCase);
-                    if (lastOrigIdx >= 0)
-                    {
-                        int backspaces = activeSentence.Length - lastOrigIdx;
-                        string trailing = activeSentence.Substring(lastOrigIdx + orig.Length);
-                        string insertion = repl + trailing;
-                        string displayLabel = $"{orig} → {repl}";
-
-                        _overlay.ShowSuggestion(
-                            screenPos: caret.ScreenPosition,
-                            heightOffset: caret.CaretHeight,
-                            displayLabel: displayLabel,
-                            insertionText: insertion,
-                            badgeType: SuggestionBadgeType.Fix,
-                            backspaces: backspaces,
-                            isSelectionReplacement: false,
-                            isAbovePosition: false
-                        );
-                        return;
-                    }
-                }
-            }
-            else
-            {
-                // Multi-error sentence correction
-                string displayLabel = $"Fix: {gecResult.CorrectedText}";
                 _overlay.ShowSuggestion(
                     screenPos: caret.ScreenPosition,
                     heightOffset: caret.CaretHeight,
                     displayLabel: displayLabel,
-                    insertionText: gecResult.CorrectedText,
+                    insertionText: insertion,
                     badgeType: SuggestionBadgeType.Fix,
-                    backspaces: activeSentence.Length,
+                    backspaces: backspaces,
                     isSelectionReplacement: false,
                     isAbovePosition: false
                 );
                 return;
             }
         }
+        else
+        {
+            // Multi-error sentence correction: apply all fixes cleanly
+            var ruleList = combinedEdits.Select(e => new RuleEdit { Original = e.Original, Replacement = e.Replacement }).ToList();
+            string correctedSentence = GrammarRuleEngine.ApplyEdits(activeSentence, ruleList);
+            string displayLabel = correctedSentence.Length > 36
+                ? $"Fix {combinedEdits.Count} errors: {combinedEdits[0].Original} → {combinedEdits[0].Replacement}"
+                : $"Fix: {correctedSentence}";
 
-        // No error detected: ensure overlay remains hidden so no intrusive UI tab pops up
-        Dispatcher.Invoke(() => _overlay?.HideOverlay());
+            _overlay.ShowSuggestion(
+                screenPos: caret.ScreenPosition,
+                heightOffset: caret.CaretHeight,
+                displayLabel: displayLabel,
+                insertionText: correctedSentence,
+                badgeType: SuggestionBadgeType.Fix,
+                backspaces: activeSentence.Length,
+                isSelectionReplacement: false,
+                isAbovePosition: false
+            );
+            return;
+        }
     }
 
     private void OnRightClickSelection(object? sender, RightClickSelectionEventArgs e)
@@ -300,30 +323,57 @@ public partial class App : System.Windows.Application
 
             selectedText = selectedText.Trim();
 
-            // Run GEC inference on the selected line/sentence
-            var gecResult = _engine.CorrectSentence(selectedText, minEditProb: 0.65f, editMargin: 0.08f);
+            // 1. Run rule engine
+            var ruleEdits = GrammarRuleEngine.FindRuleEdits(selectedText);
 
-            if (gecResult.HasCorrection &&
-                gecResult.Edits.Count > 0 &&
-                !string.Equals(gecResult.CorrectedText.Trim(), selectedText, StringComparison.OrdinalIgnoreCase))
+            // 2. Run GEC inference
+            var gecResult = _engine.CorrectSentence(selectedText, minEditProb: 0.40f, editMargin: 0.04f);
+
+            var combinedEdits = new System.Collections.Generic.List<(string Original, string Replacement)>();
+            foreach (var re in ruleEdits)
             {
-                string displayLabel;
-                if (gecResult.Edits.Count == 1)
+                if (!combinedEdits.Any(x => x.Original.Equals(re.Original, StringComparison.OrdinalIgnoreCase)))
                 {
-                    var edit = gecResult.Edits[0];
-                    displayLabel = $"{edit.Original.Trim()} → {edit.Replacement.Trim()}";
+                    combinedEdits.Add((re.Original, re.Replacement));
+                }
+            }
+
+            if (gecResult.HasCorrection && gecResult.Edits.Count > 0)
+            {
+                foreach (var ge in gecResult.Edits)
+                {
+                    string o = ge.Original.Trim(".,!?:;\"'()[]{}<>-/\\".ToCharArray());
+                    string r = ge.Replacement.Trim(".,!?:;\"'()[]{}<>-/\\".ToCharArray());
+                    if (!string.IsNullOrEmpty(o) && !string.IsNullOrEmpty(r) && !o.Equals(r, StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (!combinedEdits.Any(x => x.Original.Equals(o, StringComparison.OrdinalIgnoreCase)))
+                        {
+                            combinedEdits.Add((o, r));
+                        }
+                    }
+                }
+            }
+
+            if (combinedEdits.Count > 0)
+            {
+                var ruleList = combinedEdits.Select(x => new RuleEdit { Original = x.Original, Replacement = x.Replacement }).ToList();
+                string correctedText = GrammarRuleEngine.ApplyEdits(selectedText, ruleList);
+
+                string displayLabel;
+                if (combinedEdits.Count == 1)
+                {
+                    displayLabel = $"{combinedEdits[0].Original} → {combinedEdits[0].Replacement}";
                 }
                 else
                 {
-                    string corr = gecResult.CorrectedText.Trim();
-                    displayLabel = corr.Length > 34 ? corr.Substring(0, 31) + "..." : corr;
+                    displayLabel = correctedText.Length > 34 ? correctedText.Substring(0, 31) + "..." : correctedText;
                 }
 
                 _overlay.ShowSuggestion(
                     screenPos: e.ScreenPosition,
                     heightOffset: 0,
                     displayLabel: displayLabel,
-                    insertionText: gecResult.CorrectedText,
+                    insertionText: correctedText,
                     badgeType: SuggestionBadgeType.Fix,
                     backspaces: 0,
                     isSelectionReplacement: true,
@@ -332,7 +382,6 @@ public partial class App : System.Windows.Application
             }
             else
             {
-                // If doesn't have any changes needed, display '0 changes needed' and auto-dismiss
                 _overlay.ShowCleanStatus(e.ScreenPosition, "0 changes needed");
             }
         });
