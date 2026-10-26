@@ -51,9 +51,11 @@ class ModelConfig:
 @dataclass
 class DataConfig:
     train_paths: list[str] = field(default_factory=list)
+    val_paths: list[str] = field(default_factory=list)
     tokenizer_path: str = "data/tokenizer/tokenizer.json"
     seq_len: int = 256
     pack_sequences: bool = True
+    preload: bool = True
 
 
 @dataclass
@@ -76,6 +78,7 @@ class TrainLoopConfig:
     seed: int = 42
     max_hours: float = 6.0
     log_every: int = 20
+    eval_every: int = 100
     save_every_steps: int = 500
     keep_last: int = 4
     checkpoint_dir: str = "checkpoints"

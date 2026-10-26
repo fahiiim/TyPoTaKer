@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from typotaker.config import TrainConfig
-from typotaker.data.dataset import GECDataset, PackedLMDataset, collate
+from typotaker.data.dataset import GECDataset, PackedLMDataset, PreloadedGECDataset, collate
 from typotaker.models.growth import grow_model
 from typotaker.models.typoformer import TyPoFormer, count_parameters
 from typotaker.tokenizer import TypoTokenizer
@@ -155,20 +155,52 @@ def train(cfg: TrainConfig) -> Path:
         samples_seen = int(blob["meta"].get("samples_seen", 0))
         print(f"[resume] {resume_path} step={start_step} samples_seen={samples_seen}")
 
-    skip = samples_seen
-    if cfg.task == "lm":
+    val_loader = None
+    if getattr(cfg.data, "val_paths", None):
+        val_ds = PreloadedGECDataset(cfg.data.val_paths, tokenizer, cfg.data.seq_len)
+        val_loader = DataLoader(
+            val_ds,
+            batch_size=cfg.train.micro_batch_size,
+            shuffle=False,
+            num_workers=0,
+            pin_memory=device.type == "cuda",
+        )
+        print(f"[data] preloaded val dataset: {len(val_ds):,} samples")
+
+    if cfg.task == "gec" and getattr(cfg.data, "preload", True):
+        ds = PreloadedGECDataset(cfg.data.train_paths, tokenizer, cfg.data.seq_len)
+        print(f"[data] preloaded train dataset: {len(ds):,} samples into pinned memory")
+        train_loader = DataLoader(
+            ds,
+            batch_size=cfg.train.micro_batch_size,
+            shuffle=True,
+            num_workers=0,
+            pin_memory=device.type == "cuda",
+            drop_last=True,
+        )
+        def iter_batches():
+            while True:
+                for b in train_loader:
+                    yield b
+        batch_iter = iter_batches()
+    elif cfg.task == "lm":
         ds = PackedLMDataset(cfg.data.train_paths, tokenizer, cfg.data.seq_len, skip_lines=0)
-        # packed dataset skip is approximate; we skip sequences via samples_seen below
+        batch_iter = DataLoader(
+            ds,
+            batch_size=cfg.train.micro_batch_size,
+            collate_fn=collate,
+            num_workers=cfg.train.num_workers,
+            pin_memory=device.type == "cuda",
+        )
     else:
         ds = GECDataset(cfg.data.train_paths, tokenizer, cfg.data.seq_len, skip_lines=skip)
-
-    loader = DataLoader(
-        ds,
-        batch_size=cfg.train.micro_batch_size,
-        collate_fn=collate,
-        num_workers=cfg.train.num_workers,
-        pin_memory=device.type == "cuda",
-    )
+        batch_iter = DataLoader(
+            ds,
+            batch_size=cfg.train.micro_batch_size,
+            collate_fn=collate,
+            num_workers=cfg.train.num_workers,
+            pin_memory=device.type == "cuda",
+        )
 
     model = maybe_compile(model, cfg)
     model.train()
@@ -180,10 +212,22 @@ def train(cfg: TrainConfig) -> Path:
     running = 0.0
     tokens = 0
     skipped_samples = 0
+    current_val_loss = None
+
+    history: dict[str, list] = {
+        "steps": [],
+        "train_loss": [],
+        "val_steps": [],
+        "val_loss": [],
+        "gpu_util": [],
+        "vram_gb": [],
+        "tokens_per_sec": [],
+        "lr": [],
+    }
 
     pbar = tqdm(total=cfg.optim.max_steps, initial=start_step, desc=cfg.task)
     micro = 0
-    for batch in loader:
+    for batch in batch_iter:
         if time.time() >= deadline or step >= cfg.optim.max_steps:
             break
         if cfg.task == "lm" and skipped_samples < samples_seen:
@@ -235,9 +279,59 @@ def train(cfg: TrainConfig) -> Path:
         step += 1
         pbar.update(1)
 
+        # Validation check
+        eval_every = getattr(cfg.train, "eval_every", 100)
+        if val_loader is not None and (step % eval_every == 0 or step == cfg.optim.max_steps):
+            model.eval()
+            val_loss_acc = 0.0
+            val_count = 0
+            with torch.no_grad():
+                for v_batch in val_loader:
+                    v_batch = {k: v.to(device, non_blocking=True) for k, v in v_batch.items()}
+                    with torch.autocast(device_type=device.type, dtype=dtype or torch.float32, enabled=dtype is not None and device.type == "cuda"):
+                        v_loss = model.gec_loss(
+                            v_batch["token_ids"],
+                            v_batch["char_ids"],
+                            v_batch["edit_labels"],
+                            pad_id,
+                            keep_downweight=cfg.train.keep_downweight,
+                        )
+                    val_loss_acc += float(v_loss)
+                    val_count += 1
+                    if val_count >= 15:
+                        break
+            current_val_loss = val_loss_acc / max(1, val_count)
+            history["val_steps"].append(step)
+            history["val_loss"].append(current_val_loss)
+            model.train()
+
         if step % cfg.train.log_every == 0:
             dt = max(time.time() - t0, 1e-6)
-            pbar.set_postfix(loss=f"{running / cfg.train.log_every:.4f}", tok_s=f"{tokens / dt:.0f}")
+            avg_loss = running / cfg.train.log_every
+            gpu_u = 0
+            if device.type == "cuda":
+                try:
+                    gpu_u = torch.cuda.utilization()
+                except Exception:
+                    gpu_u = 0
+            vram_g = (torch.cuda.memory_allocated() / (1024**3)) if device.type == "cuda" else 0.0
+            tok_s = tokens / dt
+            cur_lr = float(optimizer.param_groups[0]["lr"])
+
+            history["steps"].append(step)
+            history["train_loss"].append(avg_loss)
+            history["gpu_util"].append(gpu_u)
+            history["vram_gb"].append(vram_g)
+            history["tokens_per_sec"].append(tok_s)
+            history["lr"].append(cur_lr)
+
+            pbar.set_postfix(
+                loss=f"{avg_loss:.4f}",
+                val=f"{current_val_loss:.4f}" if current_val_loss else "--",
+                gpu=f"{gpu_u}%",
+                vram=f"{vram_g:.1f}G",
+                tok_s=f"{tok_s:.0f}",
+            )
             running = 0.0
             tokens = 0
             t0 = time.time()
@@ -276,5 +370,20 @@ def train(cfg: TrainConfig) -> Path:
         json.dumps({"step": step, "samples_seen": samples_seen, "path": str(out)}, indent=2),
         encoding="utf-8",
     )
-    print(f"[done] saved {out}")
+    (root / "training_stats.json").write_text(
+        json.dumps(history, indent=2),
+        encoding="utf-8",
+    )
+    print(f"[done] saved {out} and training_stats.json")
+
+    # Update research figures with empirical stats
+    try:
+        from scripts.generate_training_visualizations import plot_loss_convergence, plot_hardware_gpu_efficiency
+        plot_loss_convergence(history)
+        plot_hardware_gpu_efficiency(history)
+        print("[viz] refreshed empirical training figures in assets/figures/")
+    except Exception as exc:
+        print(f"[viz warn] {exc}")
+
     return out
+

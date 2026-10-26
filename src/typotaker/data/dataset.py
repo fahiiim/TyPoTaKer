@@ -4,7 +4,7 @@ from collections.abc import Iterator
 from pathlib import Path
 
 import torch
-from torch.utils.data import IterableDataset
+from torch.utils.data import Dataset, IterableDataset
 
 from typotaker.data.jsonl import iter_jsonl
 from typotaker.tokenizer import TypoTokenizer
@@ -106,3 +106,57 @@ class GECDataset(IterableDataset):
 def collate(batch: list[dict[str, torch.Tensor]]) -> dict[str, torch.Tensor]:
     keys = batch[0].keys()
     return {k: torch.stack([b[k] for b in batch], dim=0) for k in keys}
+
+
+class PreloadedGECDataset(Dataset):
+    def __init__(
+        self,
+        paths: list[str],
+        tokenizer: TypoTokenizer,
+        seq_len: int,
+        max_samples: int | None = None,
+    ) -> None:
+        self.paths = [str(Path(p)) for p in paths]
+        self.tokenizer = tokenizer
+        self.seq_len = seq_len
+        pad = self.tokenizer.pad_id
+
+        token_ids_list: list[list[int]] = []
+        char_ids_list: list[list[list[int]]] = []
+        labels_list: list[list[int]] = []
+
+        for path in self.paths:
+            for row in iter_jsonl(path):
+                ids = row["src_ids"][:seq_len]
+                chars = row["src_chars"][:seq_len]
+                labels = row["edit_labels"][:seq_len]
+                t = len(ids)
+                if t < seq_len:
+                    pad_n = seq_len - t
+                    ids = ids + [pad] * pad_n
+                    chars = chars + [[0] * tokenizer.max_chars] * pad_n
+                    labels = labels + [-100] * pad_n
+                token_ids_list.append(ids)
+                char_ids_list.append(chars)
+                labels_list.append(labels)
+                if max_samples and len(token_ids_list) >= max_samples:
+                    break
+
+        if not token_ids_list:
+            raise RuntimeError(f"no GEC rows found in {self.paths}")
+
+        self.token_ids = torch.tensor(token_ids_list, dtype=torch.long)
+        self.char_ids = torch.tensor(char_ids_list, dtype=torch.long)
+        self.edit_labels = torch.tensor(labels_list, dtype=torch.long)
+        self.length = len(self.token_ids)
+
+    def __len__(self) -> int:
+        return self.length
+
+    def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
+        return {
+            "token_ids": self.token_ids[idx],
+            "char_ids": self.char_ids[idx],
+            "edit_labels": self.edit_labels[idx],
+        }
+
