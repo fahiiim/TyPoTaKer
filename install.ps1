@@ -71,17 +71,27 @@ if ($LocalPayload) {
     $ZipDest = Join-Path $env:TEMP "TypoFormer-win-x64.zip"
     
     $DownloadUrls = @(
+        "https://github.com/fahiiim/TyPoTaKer/releases/download/v1.0.0/TypoFormer-win-x64.zip",
         "https://github.com/fahiiim/TyPoTaKer/releases/latest/download/TypoFormer-win-x64.zip",
         "https://huggingface.co/fahiiim/TypoFormer/resolve/main/TypoFormer-win-x64.zip"
     )
 
     $Downloaded = $false
+    $prevProgress = $ProgressPreference
+    $ProgressPreference = "SilentlyContinue"
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
     foreach ($url in $DownloadUrls) {
         try {
             Write-Host "      Fetching from: $url" -ForegroundColor Gray
-            [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-            Invoke-WebRequest -Uri $url -OutFile $ZipDest -UseBasicParsing
-            if ((Test-Path $ZipDest) -and (Get-Item $ZipDest).Length -gt 1000000) {
+            try {
+                Invoke-WebRequest -Uri $url -OutFile $ZipDest -UseBasicParsing -MaximumRedirection 10
+            } catch {
+                $wc = New-Object System.Net.WebClient
+                $wc.Headers.Add("User-Agent", "Mozilla/5.0")
+                $wc.DownloadFile($url, $ZipDest)
+            }
+            if ((Test-Path $ZipDest) -and (Get-Item $ZipDest).Length -gt 10000000) {
                 $Downloaded = $true
                 break
             }
@@ -89,6 +99,7 @@ if ($LocalPayload) {
             Write-Host "      Notice: $url not reachable yet, trying next source..." -ForegroundColor Yellow
         }
     }
+    $ProgressPreference = $prevProgress
 
     if (-not $Downloaded) {
         Write-Error "Unable to download release archive. Please check internet connection or download manually from https://github.com/fahiiim/TyPoTaKer/releases."
