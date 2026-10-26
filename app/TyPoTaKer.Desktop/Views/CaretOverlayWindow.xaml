@@ -46,6 +46,9 @@
                             ToolTip="Click or press Tab / Ctrl+Space to apply"
                             MouseLeftButtonDown="OnContentClick">
 
+                    <!-- Brand Fountain Pen Icon -->
+                    <Image Source="typoformer.ico" Width="17" Height="17" Margin="0,0,8,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality" />
+
                     <!-- Badge (Fix vs Next vs Clean) -->
                     <Border x:Name="ModeBadge"
                             CornerRadius="6"
