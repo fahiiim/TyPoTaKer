@@ -465,7 +465,7 @@ public partial class App : System.Windows.Application
         string baseDir = AppDomain.CurrentDomain.BaseDirectory;
 
         // 1. If self-contained models and tokenizers exist right next to the executable, use BaseDirectory
-        if (File.Exists(Path.Combine(baseDir, @"export\lm_stage2_int8.onnx")) &&
+        if ((File.Exists(Path.Combine(baseDir, @"export\lm_stage2_int8.onnx")) || File.Exists(Path.Combine(baseDir, @"export\lm_stage1_int8.onnx"))) &&
             File.Exists(Path.Combine(baseDir, @"data\tokenizer\vocab.json")))
         {
             return baseDir;

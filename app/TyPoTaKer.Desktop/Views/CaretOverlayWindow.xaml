@@ -47,7 +47,7 @@
                             MouseLeftButtonDown="OnContentClick">
 
                     <!-- Brand Fountain Pen Icon -->
-                    <Image Source="pack://application:,,,/TyPoTaKer.Desktop;component/typoformer.ico" Width="17" Height="17" Margin="0,0,8,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality" />
+                    <Image Source="pack://application:,,,/TyPoTaKer.Desktop;component/typoformer_logo.png" Width="17" Height="17" Margin="0,0,8,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality" />
 
                     <!-- Badge (Fix vs Next vs Clean) -->
                     <Border x:Name="ModeBadge"

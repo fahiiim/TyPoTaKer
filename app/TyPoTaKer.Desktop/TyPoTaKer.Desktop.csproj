@@ -23,6 +23,7 @@
   <ItemGroup>
     <Resource Include="typoformer.ico" />
     <Resource Include="typoformer_logo.png" />
+    <Resource Include="typoformer_full_logo.png" />
   </ItemGroup>
 
   <ItemGroup>
@@ -31,6 +32,10 @@
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </Content>
     <Content Include="typoformer_logo.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Content Include="typoformer_full_logo.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </Content>

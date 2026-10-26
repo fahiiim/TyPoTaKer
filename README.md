@@ -1,13 +1,15 @@
 <p align="center">
-  <img src="assets/typoformer_logo.png" alt="TypoFormer Architecture" width="560"/>
+  <img src="assets/typoformer_full_logo.png" alt="TypoFormer Architecture" width="540"/>
 </p>
 
 <p align="center">
-  <strong>High-Precision Character-Aware Hybrid Transformer for Edge Autocomplete & Non-Autoregressive Grammar Correction</strong>
+  <strong>High-Precision Character-Aware Hybrid Transformer for Edge Autocomplete & Non-Autoregressive Grammar Correction</strong><br/>
+  <sub>Created & Authored by <strong>Md. Fahim Sarker Mridul</strong></sub>
 </p>
 
 <p align="center">
   <a href="https://huggingface.co/fahiiim/TypoFormer"><img src="https://img.shields.io/badge/Hugging%20Face-fahiiim%2FTypoFormer-ffd21e?style=for-the-badge&logo=huggingface&logoColor=black" alt="Hugging Face Model"/></a>
+  <img src="https://img.shields.io/badge/Author-Md._Fahim_Sarker_Mridul-1E293B?style=for-the-badge&logo=github&logoColor=white" alt="Author"/>
   <img src="https://img.shields.io/badge/Model-TypoFormer--v2.4-4B5320?style=for-the-badge&logo=target&logoColor=white" alt="Model Version"/>
   <img src="https://img.shields.io/badge/Parameters-93.88M_INT8-556B2F?style=for-the-badge&logo=cpu&logoColor=white" alt="Parameters"/>
   <img src="https://img.shields.io/badge/Latency-Sub--10ms_CPU-708238?style=for-the-badge&logo=speedtest&logoColor=white" alt="Latency"/>
