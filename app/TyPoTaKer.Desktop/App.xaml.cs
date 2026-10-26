@@ -63,6 +63,7 @@ public partial class App : System.Windows.Application
             _engine = new TyPoInferenceEngine(vocab, merges, lm, gec, maps);
             _overlay = new CaretOverlayWindow();
             _dashboard = new DashboardWindow();
+            _dashboard.SetEngine(_engine);
             _hook = new KeyboardHook();
             _mouseHook = new MouseHook();
             _tray = new TrayManager();
@@ -147,6 +148,10 @@ public partial class App : System.Windows.Application
                 "TypoFormer Active",
                 "Ready for typing and right-click correction! Press Tab or Ctrl+Space to accept. Running in tray."
             );
+
+            _dashboard.Show();
+            _dashboard.WindowState = WindowState.Normal;
+            _dashboard.Activate();
         }
         catch (Exception ex)
         {
@@ -270,35 +275,7 @@ public partial class App : System.Windows.Application
             }
         }
 
-        if (ct.IsCancellationRequested) return;
-
-        // 2. Second-Priority: Contextual autocomplete suggestions on the completed word boundary
-        var suggestions = _engine.GetAutocomplete(activeSentence, topK: 1);
-        if (suggestions.Count > 0 && suggestions[0].Probability >= 0.015f)
-        {
-            if (ct.IsCancellationRequested) return;
-
-            var best = suggestions[0];
-            string completion = best.Text.Trim();
-            if (!string.IsNullOrWhiteSpace(completion))
-            {
-                // Autocomplete completions add a trailing space for smooth next-word typing
-                string insertionText = completion + " ";
-
-                _overlay.ShowSuggestion(
-                    screenPos: caret.ScreenPosition,
-                    heightOffset: caret.CaretHeight,
-                    displayLabel: completion,
-                    insertionText: insertionText,
-                    badgeType: SuggestionBadgeType.Next,
-                    backspaces: 0,
-                    isSelectionReplacement: false,
-                    isAbovePosition: false
-                );
-                return;
-            }
-        }
-
+        // No error detected: ensure overlay remains hidden so no intrusive UI tab pops up
         Dispatcher.Invoke(() => _overlay?.HideOverlay());
     }
 
