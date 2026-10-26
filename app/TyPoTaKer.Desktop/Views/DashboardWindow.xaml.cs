@@ -150,59 +150,66 @@ public partial class DashboardWindow : Window
 
         Task.Run(() =>
         {
-            if (ct.IsCancellationRequested) return;
-
-            var candidates = new List<(string Original, string Replacement, string Action, string Category)>();
-
-            // 1. Sentence Capitalization Analysis
-            AnalyzeCapitalization(plainText, candidates);
-
-            // 2. GEC & Typo Analysis with TyPoInferenceEngine
-            if (_engine != null)
+            try
             {
-                var sentences = plainText.Split(new[] { '.', '!', '?', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
-                foreach (var s in sentences)
+                if (ct.IsCancellationRequested) return;
+
+                var candidates = new List<(string Original, string Replacement, string Action, string Category)>();
+
+                // 1. Sentence Capitalization Analysis
+                AnalyzeCapitalization(plainText, candidates);
+
+                // 2. GEC & Typo Analysis with TyPoInferenceEngine
+                if (_engine != null)
                 {
-                    if (ct.IsCancellationRequested) return;
-                    string trimmed = s.Trim();
-                    if (trimmed.Length < 2) continue;
-
-                    var res = _engine.CorrectSentence(trimmed, minEditProb: 0.35f, editMargin: 0.02f);
-                    if (res.HasCorrection && res.Edits.Count > 0)
+                    var sentences = plainText.Split(new[] { '.', '!', '?', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+                    foreach (var s in sentences)
                     {
-                        foreach (var edit in res.Edits)
+                        if (ct.IsCancellationRequested) return;
+                        string trimmed = s.Trim();
+                        if (trimmed.Length < 2) continue;
+
+                        var res = _engine.CorrectSentence(trimmed, minEditProb: 0.35f, editMargin: 0.02f);
+                        if (res.HasCorrection && res.Edits.Count > 0)
                         {
-                            string o = edit.Original.Trim(".,!?:;\"'()[]{}<>-/\\".ToCharArray());
-                            string r = edit.Replacement.Trim(".,!?:;\"'()[]{}<>-/\\".ToCharArray());
+                            foreach (var edit in res.Edits)
+                            {
+                                string o = edit.Original.Trim(".,!?:;\"'()[]{}<>-/\\".ToCharArray());
+                                string r = edit.Replacement.Trim(".,!?:;\"'()[]{}<>-/\\".ToCharArray());
 
-                            if (string.IsNullOrEmpty(o) || string.IsNullOrEmpty(r) || o.Equals(r, StringComparison.OrdinalIgnoreCase))
-                                continue;
+                                if (string.IsNullOrEmpty(o) || string.IsNullOrEmpty(r) || o.Equals(r, StringComparison.OrdinalIgnoreCase))
+                                    continue;
 
-                            // Avoid duplicate if already caught by capitalization
-                            if (candidates.Any(c => c.Original.Equals(o, StringComparison.OrdinalIgnoreCase)))
-                                continue;
+                                // Avoid duplicate if already caught by capitalization
+                                if (candidates.Any(c => c.Original.Equals(o, StringComparison.OrdinalIgnoreCase)))
+                                    continue;
 
-                            string action = GuessQuillBotAction(o, r);
-                            candidates.Add((o, r, action, "Grammar"));
+                                string action = GuessQuillBotAction(o, r);
+                                candidates.Add((o, r, action, "Grammar"));
+                            }
                         }
                     }
                 }
-            }
 
-            // 3. Fallback heuristic check for screenshot tokens: "this", "but", "si"
-            if (!candidates.Any(c => c.Original.Equals("si", StringComparison.OrdinalIgnoreCase)) &&
-                plainText.IndexOf(" si ", StringComparison.OrdinalIgnoreCase) >= 0)
-            {
-                candidates.Add(("si", "is", "Change the verb tense", "Grammar"));
-            }
+                // 3. Fallback heuristic check for screenshot tokens: "this", "but", "si"
+                if (!candidates.Any(c => c.Original.Equals("si", StringComparison.OrdinalIgnoreCase)) &&
+                    plainText.IndexOf(" si ", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    candidates.Add(("si", "is", "Change the verb tense", "Grammar"));
+                }
 
-            if (ct.IsCancellationRequested) return;
-
-            Dispatcher.Invoke(() =>
-            {
                 if (ct.IsCancellationRequested) return;
-                ApplyErrorCandidates(candidates);
-            });
+
+                Dispatcher.Invoke(() =>
+                {
+                    if (ct.IsCancellationRequested) return;
+                    ApplyErrorCandidates(candidates);
+                });
+            }
+            catch
+            {
+                // Background cancel or safe non-fatal catch
+            }
         }, ct);
     }
 
@@ -285,17 +292,27 @@ public partial class DashboardWindow : Window
         _detectedErrors.Clear();
         RefreshErrorDisplay();
 
-        foreach (var block in PlaygroundRichTextBox.Document.Blocks)
+        _isApplyingFix = true;
+        PlaygroundRichTextBox.TextChanged -= OnPlaygroundTextChanged;
+        try
         {
-            if (block is Paragraph p)
+            foreach (var block in PlaygroundRichTextBox.Document.Blocks)
             {
-                foreach (var inline in p.Inlines)
+                if (block is Paragraph p)
                 {
-                    inline.TextDecorations = null;
-                    inline.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#0F172A"));
-                    inline.Background = Brushes.Transparent;
+                    foreach (var inline in p.Inlines)
+                    {
+                        inline.TextDecorations = null;
+                        inline.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#0F172A"));
+                        inline.Background = Brushes.Transparent;
+                    }
                 }
             }
+        }
+        finally
+        {
+            PlaygroundRichTextBox.TextChanged += OnPlaygroundTextChanged;
+            _isApplyingFix = false;
         }
     }
 
@@ -303,43 +320,53 @@ public partial class DashboardWindow : Window
     {
         if (_isApplyingFix) return;
 
-        ClearAllHighlights();
-        if (candidates == null || candidates.Count == 0) return;
-
-        // QuillBot Red Underline + Soft Pink/Red Highlight
-        var redUnderlineBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#DC2626"));
-        var softRedBg = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FEE2E2"));
-        var normalTextFg = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#0F172A"));
-
-        var solidUnderline = new TextDecoration
+        _isApplyingFix = true;
+        PlaygroundRichTextBox.TextChanged -= OnPlaygroundTextChanged;
+        try
         {
-            Location = TextDecorationLocation.Underline,
-            Pen = new Pen(redUnderlineBrush, 1.8)
-        };
-        var decs = new TextDecorationCollection { solidUnderline };
+            ClearAllHighlights();
+            if (candidates == null || candidates.Count == 0) return;
 
-        foreach (var c in candidates)
-        {
-            TextRange? range = FindWordRangeInDocument(PlaygroundRichTextBox.Document, c.Original, _detectedErrors);
-            if (range != null)
+            // QuillBot Red Underline + Soft Pink/Red Highlight
+            var redUnderlineBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#DC2626"));
+            var softRedBg = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FEE2E2"));
+            var normalTextFg = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#0F172A"));
+
+            var solidUnderline = new TextDecoration
             {
-                range.ApplyPropertyValue(Inline.TextDecorationsProperty, decs);
-                range.ApplyPropertyValue(TextElement.BackgroundProperty, softRedBg);
-                range.ApplyPropertyValue(TextElement.ForegroundProperty, normalTextFg);
+                Location = TextDecorationLocation.Underline,
+                Pen = new Pen(redUnderlineBrush, 1.8)
+            };
+            var decs = new TextDecorationCollection { solidUnderline };
 
-                _detectedErrors.Add(new QuillBotErrorItem
+            foreach (var c in candidates)
+            {
+                TextRange? range = FindWordRangeInDocument(PlaygroundRichTextBox.Document, c.Original, _detectedErrors);
+                if (range != null)
                 {
-                    Original = c.Original,
-                    Replacement = c.Replacement,
-                    ActionDescription = c.Action,
-                    Category = c.Category,
-                    Range = range,
-                    IsExpanded = _detectedErrors.Count == 0 // Expand first error card by default!
-                });
-            }
-        }
+                    range.ApplyPropertyValue(Inline.TextDecorationsProperty, decs);
+                    range.ApplyPropertyValue(TextElement.BackgroundProperty, softRedBg);
+                    range.ApplyPropertyValue(TextElement.ForegroundProperty, normalTextFg);
 
-        RefreshErrorDisplay();
+                    _detectedErrors.Add(new QuillBotErrorItem
+                    {
+                        Original = c.Original,
+                        Replacement = c.Replacement,
+                        ActionDescription = c.Action,
+                        Category = c.Category,
+                        Range = range,
+                        IsExpanded = _detectedErrors.Count == 0 // Expand first error card by default!
+                    });
+                }
+            }
+
+            RefreshErrorDisplay();
+        }
+        finally
+        {
+            PlaygroundRichTextBox.TextChanged += OnPlaygroundTextChanged;
+            _isApplyingFix = false;
+        }
     }
 
     private void RefreshErrorDisplay()
@@ -479,20 +506,19 @@ public partial class DashboardWindow : Window
             // Action Buttons Row: [ Accept ]   Ignore ⊘ (Screenshot 1)
             var buttonsPanel = new StackPanel { Orientation = Orientation.Horizontal };
 
-            var acceptBtn = new Button
-            {
-                Content = "Accept",
-                Style = (Style)FindResource("QuillBotAcceptButton")
-            };
+            var acceptBtn = new Button { Content = "Accept" };
+            if (TryFindResource("QuillBotAcceptButton") is Style acceptStyle)
+                acceptBtn.Style = acceptStyle;
             acceptBtn.Click += (s, e) => ApplyCorrection(err);
             buttonsPanel.Children.Add(acceptBtn);
 
             var ignoreBtn = new Button
             {
                 Content = "Ignore ⊘",
-                Style = (Style)FindResource("QuillBotIgnoreButton"),
                 Margin = new Thickness(12, 0, 0, 0)
             };
+            if (TryFindResource("QuillBotIgnoreButton") is Style ignoreStyle)
+                ignoreBtn.Style = ignoreStyle;
             ignoreBtn.Click += (s, e) => IgnoreCorrection(err);
             buttonsPanel.Children.Add(ignoreBtn);
 
@@ -585,6 +611,7 @@ public partial class DashboardWindow : Window
         if (err.Range != null)
         {
             _isApplyingFix = true;
+            PlaygroundRichTextBox.TextChanged -= OnPlaygroundTextChanged;
             try
             {
                 // 1. Replace ONLY that specific word at that exact target position!
@@ -607,6 +634,7 @@ public partial class DashboardWindow : Window
             }
             finally
             {
+                PlaygroundRichTextBox.TextChanged += OnPlaygroundTextChanged;
                 _isApplyingFix = false;
                 _debounceTimer.Stop();
                 _debounceTimer.Start();
