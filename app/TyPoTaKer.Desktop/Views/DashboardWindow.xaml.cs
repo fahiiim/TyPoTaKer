@@ -30,7 +30,7 @@ using HorizontalAlignment = System.Windows.HorizontalAlignment;
 
 namespace TyPoTaKer.Desktop.Views;
 
-public sealed class QuillBotErrorItem
+public sealed class TypoFormerErrorItem
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();
     public string Original { get; set; } = string.Empty;
@@ -45,7 +45,7 @@ public partial class DashboardWindow : Window
 {
     private TyPoInferenceEngine? _engine;
     private readonly DispatcherTimer _debounceTimer;
-    private readonly List<QuillBotErrorItem> _detectedErrors = new();
+    private readonly List<TypoFormerErrorItem> _detectedErrors = new();
     private bool _isApplyingFix = false;
     private CancellationTokenSource? _analysisCts;
 
@@ -194,7 +194,7 @@ public partial class DashboardWindow : Window
                                 if (candidates.Any(c => c.Original.Equals(o, StringComparison.OrdinalIgnoreCase)))
                                     continue;
 
-                                string action = GuessQuillBotAction(o, r);
+                                string action = GuessTypoAction(o, r);
                                 candidates.Add((o, r, action, "Grammar"));
                             }
                         }
@@ -261,7 +261,7 @@ public partial class DashboardWindow : Window
         return end > 0 ? text.Substring(0, end) : "";
     }
 
-    private static string GuessQuillBotAction(string orig, string repl)
+    private static string GuessTypoAction(string orig, string repl)
     {
         string o = orig.ToLowerInvariant();
         string r = repl.ToLowerInvariant();
@@ -330,7 +330,7 @@ public partial class DashboardWindow : Window
             ClearAllHighlights();
             if (candidates == null || candidates.Count == 0) return;
 
-            // QuillBot Red Underline + Soft Pink/Red Highlight
+            // TypoFormer Red Underline + Soft Pink/Red Highlight
             var redUnderlineBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#DC2626"));
             var softRedBg = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FEE2E2"));
             var normalTextFg = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#0F172A"));
@@ -351,7 +351,7 @@ public partial class DashboardWindow : Window
                     range.ApplyPropertyValue(TextElement.BackgroundProperty, softRedBg);
                     range.ApplyPropertyValue(TextElement.ForegroundProperty, normalTextFg);
 
-                    _detectedErrors.Add(new QuillBotErrorItem
+                    _detectedErrors.Add(new TypoFormerErrorItem
                     {
                         Original = c.Original,
                         Replacement = c.Replacement,
@@ -402,7 +402,7 @@ public partial class DashboardWindow : Window
         AllCountText.Text = count.ToString();
         GrammarCountText.Text = count.ToString();
 
-        // 4. Render QuillBot Cards in Sidebar (Screenshot 1)
+        // 4. Render TypoFormer Cards in Sidebar (Screenshot 1)
         ErrorCardsContainer.Children.Clear();
 
         if (count == 0)
@@ -413,7 +413,7 @@ public partial class DashboardWindow : Window
         }
 
         EmptyStatePanel.Visibility = Visibility.Collapsed;
-        StatusStripText.Text = $"QuillBot Assistant: {count} suggestion{(count == 1 ? "" : "s")} found.";
+        StatusStripText.Text = $"TypoFormer: {count} suggestion{(count == 1 ? "" : "s")} found.";
 
         // Ensure at least one error card is expanded
         if (!_detectedErrors.Any(e => e.IsExpanded))
@@ -423,12 +423,12 @@ public partial class DashboardWindow : Window
 
         foreach (var err in _detectedErrors)
         {
-            var card = BuildQuillBotCard(err);
+            var card = BuildTypoFormerCard(err);
             ErrorCardsContainer.Children.Add(card);
         }
     }
 
-    private Border BuildQuillBotCard(QuillBotErrorItem err)
+    private Border BuildTypoFormerCard(TypoFormerErrorItem err)
     {
         var card = new Border
         {
@@ -510,7 +510,7 @@ public partial class DashboardWindow : Window
             var buttonsPanel = new StackPanel { Orientation = Orientation.Horizontal };
 
             var acceptBtn = new Button { Content = "Accept" };
-            if (TryFindResource("QuillBotAcceptButton") is Style acceptStyle)
+            if (TryFindResource("TypoFormerAcceptButton") is Style acceptStyle)
                 acceptBtn.Style = acceptStyle;
             acceptBtn.Click += (s, e) => ApplyCorrection(err);
             buttonsPanel.Children.Add(acceptBtn);
@@ -520,7 +520,7 @@ public partial class DashboardWindow : Window
                 Content = "Ignore ⊘",
                 Margin = new Thickness(12, 0, 0, 0)
             };
-            if (TryFindResource("QuillBotIgnoreButton") is Style ignoreStyle)
+            if (TryFindResource("TypoFormerIgnoreButton") is Style ignoreStyle)
                 ignoreBtn.Style = ignoreStyle;
             ignoreBtn.Click += (s, e) => IgnoreCorrection(err);
             buttonsPanel.Children.Add(ignoreBtn);
@@ -591,7 +591,7 @@ public partial class DashboardWindow : Window
         return card;
     }
 
-    private void SelectErrorInEditor(QuillBotErrorItem err)
+    private void SelectErrorInEditor(TypoFormerErrorItem err)
     {
         if (err.Range != null)
         {
@@ -609,7 +609,7 @@ public partial class DashboardWindow : Window
         }
     }
 
-    private void ApplyCorrection(QuillBotErrorItem err)
+    private void ApplyCorrection(TypoFormerErrorItem err)
     {
         if (err.Range != null)
         {
@@ -645,7 +645,7 @@ public partial class DashboardWindow : Window
         }
     }
 
-    private void IgnoreCorrection(QuillBotErrorItem err)
+    private void IgnoreCorrection(TypoFormerErrorItem err)
     {
         if (err.Range != null)
         {
@@ -671,7 +671,7 @@ public partial class DashboardWindow : Window
         if (caret == null) return;
 
         // If user places cursor on a red word, expand its card in the sidebar
-        QuillBotErrorItem? matched = _detectedErrors.FirstOrDefault(err => err.Range != null && err.Range.Contains(caret));
+        TypoFormerErrorItem? matched = _detectedErrors.FirstOrDefault(err => err.Range != null && err.Range.Contains(caret));
         if (matched != null && !matched.IsExpanded)
         {
             foreach (var other in _detectedErrors) other.IsExpanded = false;
@@ -682,7 +682,7 @@ public partial class DashboardWindow : Window
 
     private void OnPlaygroundPreviewKeyDown(object sender, KeyEventArgs e)
     {
-        // QuillBot Tab shortcut: instantly accepts the active card fix
+        // TypoFormer Tab shortcut: instantly accepts the active card fix
         if (e.Key == Key.Tab && _detectedErrors.Count > 0)
         {
             AcceptActiveError();
@@ -690,7 +690,7 @@ public partial class DashboardWindow : Window
         }
     }
 
-    private static TextRange? FindWordRangeInDocument(FlowDocument doc, string searchText, List<QuillBotErrorItem> existingErrors)
+    private static TextRange? FindWordRangeInDocument(FlowDocument doc, string searchText, List<TypoFormerErrorItem> existingErrors)
     {
         for (TextPointer start = doc.ContentStart; start != null && start.CompareTo(doc.ContentEnd) < 0; start = start.GetNextContextPosition(LogicalDirection.Forward))
         {

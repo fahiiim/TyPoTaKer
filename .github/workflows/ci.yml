@@ -13,7 +13,7 @@ jobs:
           python-version: "3.12"
       - name: Install CPU torch and package
         run: |
-          pip install pyyaml numpy tqdm pytest tokenizers
+          pip install pyyaml numpy tqdm pytest tokenizers onnx onnxruntime
           pip install torch --index-url https://download.pytorch.org/whl/cpu
           pip install -e .
       - run: pytest -q

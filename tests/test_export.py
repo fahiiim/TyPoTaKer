@@ -4,8 +4,11 @@ import tempfile
 from pathlib import Path
 
 import numpy as np
-import onnxruntime as ort
+import pytest
 import torch
+
+ort = pytest.importorskip("onnxruntime")
+pytest.importorskip("onnx")
 
 from typotaker.config import ModelConfig
 from typotaker.export import export_onnx, quantize_onnx

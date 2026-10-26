@@ -66,7 +66,7 @@ def create_release_and_upload():
         "- Stage 2 INT8 Causal Language Model (lm_stage2_int8.onnx — 94M parameters)\n"
         "- Stage 2 INT8 GEC Edit-Tagger (gec_stage2_int8.onnx)\n"
         "- Complete 16,000 Byte-Level BPE tokenizers and edit-confusion vocabulary maps\n"
-        "- QuillBot-style Grammar Assistant with real-time error cards, gutter counts, and floating fix overlay\n\n"
+        "- TypoFormer Interactive Dashboard with real-time error cards, gutter counts, and floating fix overlay\n\n"
         "### 1-Line PowerShell Install:\n"
         "```powershell\n"
         "irm https://raw.githubusercontent.com/fahiiim/TyPoTaKer/main/install.ps1 | iex\n"

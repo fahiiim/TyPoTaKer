@@ -184,7 +184,7 @@ Write-Host "  Author: Md. Fahim Sarker Mridul" -ForegroundColor Yellow
 Write-Host "   * Type anywhere in Windows (Word, Notepad, Browser, etc.)" -ForegroundColor White
 Write-Host "   * Press [Tab] to accept corrections and autocompletions" -ForegroundColor White
 Write-Host "   * Select any text and right-click to fix grammar instantly" -ForegroundColor White
-Write-Host "   * Double-click tray icon to open the QuillBot Dashboard" -ForegroundColor White
+Write-Host "   * Double-click tray icon to open the TypoFormer Dashboard" -ForegroundColor White
 Write-Host "==========================================================" -ForegroundColor Cyan
 Write-Host ""
 
