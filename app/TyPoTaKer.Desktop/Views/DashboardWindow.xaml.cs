@@ -54,13 +54,16 @@ public partial class DashboardWindow : Window
 
     public DashboardWindow()
     {
-        InitializeComponent();
-
         _debounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
         _debounceTimer.Tick += OnDebounceElapsed;
 
+        InitializeComponent();
+
         Loaded += (s, e) =>
         {
+            Topmost = false;
+            Activate();
+            Focus();
             TriggerAnalysis();
         };
     }
@@ -120,7 +123,7 @@ public partial class DashboardWindow : Window
 
     private void OnPlaygroundTextChanged(object sender, TextChangedEventArgs e)
     {
-        if (_isApplyingFix) return;
+        if (_isApplyingFix || _debounceTimer == null) return;
         _debounceTimer.Stop();
         _debounceTimer.Start();
     }

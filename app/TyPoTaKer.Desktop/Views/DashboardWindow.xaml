@@ -5,6 +5,9 @@
         Height="640" Width="980"
         MinHeight="550" MinWidth="850"
         WindowStartupLocation="CenterScreen"
+        ShowInTaskbar="True"
+        WindowState="Normal"
+        Topmost="True"
         Background="#F8FAFC"
         Foreground="#0F172A"
         FontFamily="Segoe UI Variable Text, Segoe UI, sans-serif">

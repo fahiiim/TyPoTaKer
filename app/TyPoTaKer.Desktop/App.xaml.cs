@@ -61,9 +61,10 @@ public partial class App : System.Windows.Application
         try
         {
             _engine = new TyPoInferenceEngine(vocab, merges, lm, gec, maps);
-            _overlay = new CaretOverlayWindow();
             _dashboard = new DashboardWindow();
+            MainWindow = _dashboard;
             _dashboard.SetEngine(_engine);
+            _overlay = new CaretOverlayWindow();
             _hook = new KeyboardHook();
             _mouseHook = new MouseHook();
             _tray = new TrayManager();
@@ -155,6 +156,7 @@ public partial class App : System.Windows.Application
         }
         catch (Exception ex)
         {
+            try { File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "crash.log"), ex.ToString()); } catch { }
             System.Windows.MessageBox.Show(
                 $"Failed to start TypoFormer: {ex.Message}",
                 "TypoFormer Error",
