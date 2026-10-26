@@ -31,9 +31,12 @@ if ($env:PROCESSOR_ARCHITECTURE -ne "AMD64" -and $env:PROCESSOR_ARCHITEW6432 -ne
 Write-Host "[1/5] Checking for running instances..." -ForegroundColor White
 Get-Process -Name "TyPoTaKer*", "TypoFormer*" -ErrorAction SilentlyContinue | ForEach-Object {
     Write-Host "      Closing process $($_.Name) (PID: $($_.Id))..." -ForegroundColor Gray
-    Stop-Process -Id $_.Id -Force
+    try {
+        Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
+    } catch { }
+    taskkill /F /PID $_.Id 2>$null | Out-Null
 }
-Start-Sleep -Milliseconds 400
+Start-Sleep -Milliseconds 500
 
 # 3. Setup Target Installation Directory
 $InstallDir = Join-Path $env:LOCALAPPDATA "Programs\TypoFormer"
