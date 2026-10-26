@@ -65,7 +65,7 @@ if ($ScriptDir) {
 if ($LocalPayload) {
     Write-Host "      Detected local payload: $LocalPayload" -ForegroundColor Green
     Write-Host "      Copying binaries and models to $InstallDir..." -ForegroundColor Gray
-    robocopy $LocalPayload $InstallDir /E /IS /IT /NP /NDL /NFL /NJH /NJS | Out-Null
+    robocopy "$LocalPayload" "$InstallDir" /E /IS /IT /NP /NDL /NFL /NJH /NJS | Out-Null
 } else {
     # Remote execution (irm ... | iex) -> Download standalone distribution zip
     Write-Host "      --------------------------------------------------" -ForegroundColor DarkGray
