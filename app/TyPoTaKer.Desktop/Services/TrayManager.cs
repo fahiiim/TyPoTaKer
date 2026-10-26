@@ -60,6 +60,12 @@ public sealed class TrayManager : IDisposable
         };
         contextMenu.Items.Add(infoItem);
 
+        var authorItem = new ToolStripMenuItem("Author: Md. Fahim Sarker Mridul")
+        {
+            Enabled = false
+        };
+        contextMenu.Items.Add(authorItem);
+
         contextMenu.Items.Add(new ToolStripSeparator());
 
         var exitItem = new ToolStripMenuItem("Exit TypoFormer", null, (s, e) =>
@@ -76,13 +82,21 @@ public sealed class TrayManager : IDisposable
             {
                 trayIcon = new Icon(icoPath);
             }
+            else
+            {
+                string? exePath = Environment.ProcessPath;
+                if (!string.IsNullOrEmpty(exePath) && System.IO.File.Exists(exePath))
+                {
+                    trayIcon = Icon.ExtractAssociatedIcon(exePath) ?? SystemIcons.Information;
+                }
+            }
         }
         catch { }
 
         _notifyIcon = new NotifyIcon
         {
             Icon = trayIcon,
-            Text = "TypoFormer — AI Keystroke Companion",
+            Text = "TypoFormer — by Md. Fahim Sarker Mridul",
             ContextMenuStrip = contextMenu,
             Visible = true
         };

@@ -56,27 +56,30 @@ def create_release_and_upload():
         else:
             raise
 
+    release_body = (
+        "## TypoFormer v1.0.0 (Production Release)\n\n"
+        "**Author:** Md. Fahim Sarker Mridul\n\n"
+        "**TypoFormer** is a high-precision, character-aware hybrid transformer for real-time edge autocomplete "
+        "and non-autoregressive grammar error correction (GEC).\n\n"
+        "### Included in this release:\n"
+        "- Standalone .NET 8 WPF desktop application with embedded fountain pen branding\n"
+        "- Stage 2 INT8 Causal Language Model (lm_stage2_int8.onnx — 94M parameters)\n"
+        "- Stage 2 INT8 GEC Edit-Tagger (gec_stage2_int8.onnx)\n"
+        "- Complete 16,000 Byte-Level BPE tokenizers and edit-confusion vocabulary maps\n"
+        "- QuillBot-style Grammar Assistant with real-time error cards, gutter counts, and floating fix overlay\n\n"
+        "### 1-Line PowerShell Install:\n"
+        "```powershell\n"
+        "irm https://raw.githubusercontent.com/fahiiim/TyPoTaKer/main/install.ps1 | iex\n"
+        "```\n"
+    )
+
     if not release_data:
         create_url = f"https://api.github.com/repos/{repo}/releases"
         payload = {
             "tag_name": tag_name,
             "target_commitish": "main",
             "name": "TypoFormer v1.0.0 — Production Release (Offline AI Keystroke Companion)",
-            "body": (
-                "## TypoFormer v1.0.0 (Production Release)\n\n"
-                "**TypoFormer** is a high-precision, character-aware hybrid transformer for real-time edge autocomplete "
-                "and non-autoregressive grammar error correction (GEC).\n\n"
-                "### Included in this release:\n"
-                "- Standalone .NET 8 WPF desktop application with embedded fountain pen branding\n"
-                "- Stage 2 INT8 Causal Language Model (lm_stage2_int8.onnx — 94M parameters)\n"
-                "- Stage 2 INT8 GEC Edit-Tagger (gec_stage2_int8.onnx)\n"
-                "- Complete 16,000 Byte-Level BPE tokenizers and edit-confusion vocabulary maps\n"
-                "- QuillBot-style Grammar Assistant with real-time error cards, gutter counts, and floating fix overlay\n\n"
-                "### 1-Line PowerShell Install:\n"
-                "```powershell\n"
-                "irm https://raw.githubusercontent.com/fahiiim/TyPoTaKer/main/install.ps1 | iex\n"
-                "```\n"
-            ),
+            "body": release_body,
             "draft": False,
             "prerelease": False,
         }
@@ -88,6 +91,21 @@ def create_release_and_upload():
         with urllib.request.urlopen(create_req) as resp:
             release_data = json.loads(resp.read().decode())
             print(f"[OK] Created release: ID {release_data['id']} at {release_data['html_url']}")
+    else:
+        # Update existing release body to include Author
+        patch_url = f"https://api.github.com/repos/{repo}/releases/{release_data['id']}"
+        patch_payload = {
+            "name": "TypoFormer v1.0.0 — Production Release (Offline AI Keystroke Companion)",
+            "body": release_body,
+        }
+        patch_req = urllib.request.Request(
+            patch_url,
+            data=json.dumps(patch_payload).encode("utf-8"),
+            headers={"Content-Type": "application/json", **headers},
+            method="PATCH",
+        )
+        with urllib.request.urlopen(patch_req) as patch_resp:
+            print("[OK] Updated release notes with author attribution.")
 
     release_id = release_data["id"]
     upload_url_template = release_data["upload_url"]  # format: https://uploads.github.com/.../assets{?name,label}

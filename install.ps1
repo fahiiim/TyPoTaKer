@@ -9,14 +9,15 @@
 [CmdletBinding()]
 param(
     [string]$Version = "latest",
-    [bool]$AutoStart = $true,
-    [bool]$LaunchImmediately = $true
+    $AutoStart = $true,
+    $LaunchImmediately = $true
 )
 
 $ErrorActionPreference = "Stop"
 
 Write-Host "==========================================================" -ForegroundColor Cyan
 Write-Host "    TypoFormer - Offline AI Keystroke Companion Setup    " -ForegroundColor Green
+Write-Host "          Author: Md. Fahim Sarker Mridul                 " -ForegroundColor Yellow
 Write-Host "==========================================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -67,6 +68,10 @@ if ($LocalPayload) {
     robocopy $LocalPayload $InstallDir /E /IS /IT /NP /NDL /NFL /NJH /NJS | Out-Null
 } else {
     # Remote execution (irm ... | iex) -> Download standalone distribution zip
+    Write-Host "      --------------------------------------------------" -ForegroundColor DarkGray
+    Write-Host "      Author  : Md. Fahim Sarker Mridul" -ForegroundColor Yellow
+    Write-Host "      Package : TypoFormer Standalone (Win-x64, 94M INT8 LM + GEC)" -ForegroundColor Cyan
+    Write-Host "      --------------------------------------------------" -ForegroundColor DarkGray
     Write-Host "      Downloading TypoFormer standalone package..." -ForegroundColor Cyan
     $ZipDest = Join-Path $env:TEMP "TypoFormer-win-x64.zip"
     
@@ -83,7 +88,7 @@ if ($LocalPayload) {
 
     foreach ($url in $DownloadUrls) {
         try {
-            Write-Host "      Fetching from: $url" -ForegroundColor Gray
+            Write-Host "      [Author: Md. Fahim Sarker Mridul] Downloading from: $url" -ForegroundColor Cyan
             try {
                 Invoke-WebRequest -Uri $url -OutFile $ZipDest -UseBasicParsing -MaximumRedirection 10
             } catch {
@@ -130,7 +135,7 @@ $Shortcut = $WshShell.CreateShortcut($StartMenuLnk)
 $Shortcut.TargetPath = $TargetExe
 $Shortcut.WorkingDirectory = $InstallDir
 if (Test-Path $IconFile) { $Shortcut.IconLocation = $IconFile }
-$Shortcut.Description = "TypoFormer - 94M INT8 Causal LM and GEC Desktop Assistant"
+$Shortcut.Description = "TypoFormer by Md. Fahim Sarker Mridul - Offline AI Keystroke Companion"
 $Shortcut.Save()
 Write-Host "      [OK] Start Menu shortcut created: $StartMenuLnk" -ForegroundColor Gray
 
@@ -141,7 +146,7 @@ $DesktopShortcut = $WshShell.CreateShortcut($DesktopLnk)
 $DesktopShortcut.TargetPath = $TargetExe
 $DesktopShortcut.WorkingDirectory = $InstallDir
 if (Test-Path $IconFile) { $DesktopShortcut.IconLocation = $IconFile }
-$DesktopShortcut.Description = "TypoFormer - AI Keystroke Companion"
+$DesktopShortcut.Description = "TypoFormer by Md. Fahim Sarker Mridul - Offline AI Keystroke Companion"
 $DesktopShortcut.Save()
 Write-Host "      [OK] Desktop shortcut created: $DesktopLnk" -ForegroundColor Gray
 
@@ -175,6 +180,7 @@ Write-Host "[5/5] Installation complete!" -ForegroundColor Green
 Write-Host ""
 Write-Host "==========================================================" -ForegroundColor Cyan
 Write-Host "  TypoFormer is ready to use!" -ForegroundColor Green
+Write-Host "  Author: Md. Fahim Sarker Mridul" -ForegroundColor Yellow
 Write-Host "   * Type anywhere in Windows (Word, Notepad, Browser, etc.)" -ForegroundColor White
 Write-Host "   * Press [Tab] to accept corrections and autocompletions" -ForegroundColor White
 Write-Host "   * Select any text and right-click to fix grammar instantly" -ForegroundColor White
@@ -182,7 +188,15 @@ Write-Host "   * Double-click tray icon to open the QuillBot Dashboard" -Foregro
 Write-Host "==========================================================" -ForegroundColor Cyan
 Write-Host ""
 
-if ($LaunchImmediately) {
+$ShouldLaunch = $true
+if ($LaunchImmediately -is [bool]) {
+    $ShouldLaunch = $LaunchImmediately
+} elseif ($LaunchImmediately -is [string]) {
+    $boolVal = $false
+    if ([bool]::TryParse($LaunchImmediately, [ref]$boolVal)) { $ShouldLaunch = $boolVal }
+}
+
+if ($ShouldLaunch) {
     Write-Host "Starting TypoFormer..." -ForegroundColor Cyan
     Start-Process -FilePath $TargetExe -WorkingDirectory $InstallDir
 }

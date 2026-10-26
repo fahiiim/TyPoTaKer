@@ -8,14 +8,15 @@
 
 [CmdletBinding()]
 param(
-    [bool]$AutoStart = $true,
-    [bool]$LaunchImmediately = $true
+    $AutoStart = $true,
+    $LaunchImmediately = $true
 )
 
 $ErrorActionPreference = "Stop"
 
 Write-Host "==========================================================" -ForegroundColor Cyan
 Write-Host "       TypoFormer - AI Keystroke Companion Installer       " -ForegroundColor Green
+Write-Host "          Author: Md. Fahim Sarker Mridul                 " -ForegroundColor Yellow
 Write-Host "==========================================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -90,7 +91,7 @@ $Shortcut = $WshShell.CreateShortcut($StartMenuLnk)
 $Shortcut.TargetPath = $TargetExe
 $Shortcut.WorkingDirectory = $InstallDir
 if (Test-Path $IconFile) { $Shortcut.IconLocation = $IconFile }
-$Shortcut.Description = "TypoFormer - 94M INT8 Causal LM and GEC Desktop Assistant"
+$Shortcut.Description = "TypoFormer by Md. Fahim Sarker Mridul - Offline AI Keystroke Companion"
 $Shortcut.Save()
 Write-Host "      [OK] Created Start Menu Shortcut: $StartMenuLnk" -ForegroundColor Gray
 
@@ -101,7 +102,7 @@ $DesktopShortcut = $WshShell.CreateShortcut($DesktopLnk)
 $DesktopShortcut.TargetPath = $TargetExe
 $DesktopShortcut.WorkingDirectory = $InstallDir
 if (Test-Path $IconFile) { $DesktopShortcut.IconLocation = $IconFile }
-$DesktopShortcut.Description = "TypoFormer - AI Keystroke Companion"
+$DesktopShortcut.Description = "TypoFormer by Md. Fahim Sarker Mridul - Offline AI Keystroke Companion"
 $DesktopShortcut.Save()
 Write-Host "      [OK] Created Desktop Shortcut: $DesktopLnk" -ForegroundColor Gray
 

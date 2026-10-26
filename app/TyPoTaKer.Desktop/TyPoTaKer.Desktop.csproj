@@ -8,6 +8,11 @@
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationIcon>typoformer.ico</ApplicationIcon>
+    <Authors>Md. Fahim Sarker Mridul</Authors>
+    <Company>Md. Fahim Sarker Mridul</Company>
+    <Product>TypoFormer</Product>
+    <Description>Offline AI Keystroke Companion</Description>
+    <Copyright>Copyright © 2026 Md. Fahim Sarker Mridul</Copyright>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,12 +21,19 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="typoformer.ico">
+    <Resource Include="typoformer.ico" />
+    <Resource Include="typoformer_logo.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="typoformer.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="typoformer_logo.png">
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Content Include="typoformer_logo.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>
