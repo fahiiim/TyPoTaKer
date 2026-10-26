@@ -22,21 +22,38 @@
 
 ## Installation Methods
 
-### Method 1: 1-Click Auto Installer (Recommended for End Users)
+### Method 1: Instant PowerShell 1-Liner (Recommended for Everyone)
 
-The easiest way to install and integrate TypoFormer with your Windows desktop and Start Menu:
+Open **Windows PowerShell** (or Windows Terminal) and paste this single command:
 
-1. Open the [`installer/`](installer) folder.
-2. Double-click **`Install.bat`** (or right-click and select **Run as Administrator** if your organization requires it).
-3. The installer will:
-   - Copy all application binaries, neural models, tokenizers, and icons to `%LOCALAPPDATA%\Programs\TypoFormer`.
-   - Create a **Desktop Shortcut** (`TypoFormer.lnk`) with the official TypoFormer icon.
-   - Create a **Start Menu Shortcut** in Windows Programs.
-   - Configure optional Windows logon auto-start.
-   - Automatically launch TypoFormer in your Windows System Tray.
+```powershell
+irm https://raw.githubusercontent.com/fahiiim/TyPoTaKer/main/install.ps1 | iex
+```
+
+*(Alternatively using `iwr`: `iwr -useb https://raw.githubusercontent.com/fahiiim/TyPoTaKer/main/install.ps1 | iex`)*
+
+**What this command does automatically:**
+1. Downloads the pre-built standalone TypoFormer package with the 94M INT8 neural models and tokenizers.
+2. Unpacks it into `%LOCALAPPDATA%\Programs\TypoFormer`.
+3. Creates a **Desktop Shortcut** (`TypoFormer.lnk`) and a **Start Menu Shortcut**.
+4. Registers optional Windows logon auto-start.
+5. Launches TypoFormer immediately in your System Tray.
 
 > [!TIP]
-> No administrator rights are required for normal users since it installs cleanly to your local user profile.
+> **No administrator rights required**: It installs cleanly into your local user profile without modifying system-level directories.
+
+---
+
+### Method 2: 1-Click Installer from Repository
+
+If you have cloned or downloaded this repository:
+
+1. Open PowerShell and run:
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File .\install.ps1
+   ```
+   Or double-click [`installer/Install.bat`](installer/Install.bat).
+2. The installer will copy all local binaries, models, and shortcuts into place and launch the application.
 
 ---
 

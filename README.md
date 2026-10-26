@@ -298,7 +298,14 @@ The companion Windows desktop application runs entirely offline using `.NET 8 WP
 * **Floating Glassmorphic Caret Overlay**: Spring/fade-in animations (<130ms) directly tracking text cursors in Word, Notepad, VS Code, and browsers.
 * **Dual Hotkey Acceptance**: Hit <kbd>Tab</kbd> or <kbd>Ctrl</kbd> + <kbd>Space</kbd> for instant insertion.
 * **Selection Correction**: Highlight text and right-click to inspect full-sentence grammatical edits.
-* **Installer**: 1-click Windows installer script located at [`installer/Install.bat`](installer/Install.bat). For user installation instructions, see [INSTALL.md](INSTALL.md).
+* **QuillBot-Style Assistant**: Full interactive playground with real-time error cards, gutter counts, and single-click acceptance.
+
+#### 1-Line PowerShell Quick Install
+Open **Windows PowerShell** and paste:
+```powershell
+irm https://raw.githubusercontent.com/fahiiim/TyPoTaKer/main/install.ps1 | iex
+```
+For full options and local setup, see [INSTALL.md](INSTALL.md).
 
 ---
 

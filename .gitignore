@@ -69,3 +69,5 @@ hf_dist/
 bin/
 obj/
 *.user
+installer/payload/
+installer/*.zip
