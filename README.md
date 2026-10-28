@@ -58,41 +58,6 @@ BERT (Devlin et al., 2018) is fundamentally a static masked language modeling (M
   <em>Figure 1: TypoFormer Full Internal Neural Architecture — Fusing byte-level subwords with multi-scale character convolutions, Pre-RMSNorm grouped-query attention (GQA), rotary embeddings (RoPE), SwiGLU feed-forward networks, and multi-task dual heads for offline autocomplete and grammar error correction.</em>
 </p>
 
-```text
-                             [TASK 1: AUTOCOMPLETE]              [TASK 2: GRAMMAR & TYPO]
-                            Next-Word Probabilities             Keystroke Edit Tag Classes
-                                       ^                                    ^
-                                   (Softmax)                            (Softmax)
-                                       |                                    |
-                            Linear(d -> 16,000)                  Linear(d -> 6,148 tags)
-                                       \                                    /
-                                        +-----------------+----------------+
-                                                          |
-                                                  [Final RMSNorm]
-                                                          |
-                                      +---------------------------------------+
-                                      |   Nx Transformer Backbone Block       |
-                                      |   - Add & Residual (FFN Bypass)       |
-                                      |   - SwiGLU FFN: W2(SiLU(W1x) * W3x)   |
-                                      |   - RMSNorm (Pre-LN)                  |
-                                      |   - Add & Residual (Attention Bypass) |
-                                      |   - GQA Attention (RoPE + QK-RMSNorm) |
-                                      |   - RMSNorm (Pre-LN)                  |
-                                      +---------------------------------------+
-                                                          ^
-                                                          |
-                                               (+) Gated Highway Fusion
-                                                      /        \
-                                                     /          \ * alpha (gate)
-                                                    v            v
-                                        +-----------------+  +----------------------+
-                                        | BPE Embedding   |  | Gated Char-CNN       |
-                                        | V = 16,000      |  | Conv1D x 2 + MaxPool |
-                                        +-----------------+  +----------------------+
-                                                ^                    ^
-                                                |                    |
-                                           Token IDs            Raw UTF-8 Bytes
-```
 
 ---
 
