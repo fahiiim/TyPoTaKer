@@ -28,6 +28,7 @@ data/processed/**/*.txt
 !data/processed/gec/v2/edit_maps.json
 !data/processed/gec/v3/edit_maps.json
 !data/processed/gec/v4/edit_maps.json
+!data/processed/gec/v5/edit_maps.json
 !export/edit_maps.json
 
 # Checkpoints & Models
