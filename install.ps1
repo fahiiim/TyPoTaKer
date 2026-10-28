@@ -92,9 +92,9 @@ if ($LocalPayload) {
     $ZipDest = Join-Path $env:TEMP "TypoFormer-win-x64.zip"
     
     $DownloadUrls = @(
-        "https://github.com/fahiiim/TyPoTaKer/releases/download/v1.0.0/TypoFormer-win-x64.zip",
+        "https://huggingface.co/fahiiim/TypoFormer/resolve/main/TypoFormer-win-x64.zip",
         "https://github.com/fahiiim/TyPoTaKer/releases/latest/download/TypoFormer-win-x64.zip",
-        "https://huggingface.co/fahiiim/TypoFormer/resolve/main/TypoFormer-win-x64.zip"
+        "https://github.com/fahiiim/TyPoTaKer/releases/download/v1.0.0/TypoFormer-win-x64.zip"
     )
 
     $Downloaded = $false
