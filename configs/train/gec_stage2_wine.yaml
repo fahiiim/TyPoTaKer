@@ -1,0 +1,36 @@
+task: gec
+run_name: gec_stage2_wine
+model: configs/model/stage2_85m.yaml
+init_from: checkpoints/gec_stage2_v4
+data:
+  train_paths:
+    - data/processed/gec/v5/train.jsonl
+  val_paths:
+    - data/processed/gec/v5/val.jsonl
+  tokenizer_path: data/tokenizer/tokenizer.json
+  seq_len: 128
+  pack_sequences: false
+  preload: true
+optim:
+  lr: 0.00008
+  weight_decay: 0.05
+  betas: [0.9, 0.95]
+  warmup_steps: 100
+  max_steps: 2500
+  grad_clip: 1.0
+train:
+  micro_batch_size: 64
+  grad_accum: 2
+  amp_dtype: bf16
+  compile: false
+  compile_mode: default
+  seed: 42
+  max_hours: 1.0
+  log_every: 25
+  eval_every: 100
+  save_every_steps: 500
+  keep_last: 3
+  checkpoint_dir: checkpoints
+  resume: "none"
+  num_workers: 0
+  keep_downweight: 0.08

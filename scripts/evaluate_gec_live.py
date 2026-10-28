@@ -1,5 +1,5 @@
 """Live evaluation benchmark for newly fine-tuned TypoFormer INT8 ONNX model.
-Evaluates accuracy across the 8 Grammarly error categories and measures per-sentence CPU latency.
+Evaluates accuracy across core keystroke error categories and measures per-sentence CPU latency.
 """
 
 import sys

@@ -20,6 +20,7 @@ def convert_csv_to_gec(
     tokenizer_path: str | Path,
     out_jsonl: str | Path,
     maps_path: str | Path | None = None,
+    base_maps_path: str | Path | None = None,
     k_replace: int = 2048,
     k_append: int = 2048,
     max_chars: int = 16,
@@ -50,15 +51,24 @@ def convert_csv_to_gec(
             all_tgt_ids.extend(tgt_ids)
 
     print(f"Total valid pairs loaded: {len(pairs):,}")
-    print(f"Building dynamic edit maps (k_replace={k_replace}, k_append={k_append})...")
-    replace_map, append_map = build_freq_maps(all_tgt_ids, k_replace=k_replace, k_append=k_append)
+    
+    if base_maps_path and Path(base_maps_path).exists():
+        print(f"Loading existing base edit maps from {base_maps_path}...")
+        with Path(base_maps_path).open("r", encoding="utf-8") as f:
+            base_payload = json.load(f)
+        replace_map = {int(k): v for k, v in base_payload["replace"].items()}
+        append_map = {int(k): v for k, v in base_payload["append"].items()}
+        maps_payload = base_payload
+    else:
+        print(f"Building dynamic edit maps (k_replace={k_replace}, k_append={k_append})...")
+        replace_map, append_map = build_freq_maps(all_tgt_ids, k_replace=k_replace, k_append=k_append)
+        maps_payload = {
+            "replace": {str(k): v for k, v in replace_map.items()},
+            "append": {str(k): v for k, v in append_map.items()},
+            "id_to_replace": {str(v): int(k) for k, v in replace_map.items()},
+            "id_to_append": {str(v): int(k) for k, v in append_map.items()},
+        }
 
-    maps_payload = {
-        "replace": {str(k): v for k, v in replace_map.items()},
-        "append": {str(k): v for k, v in append_map.items()},
-        "id_to_replace": {str(v): int(k) for k, v in replace_map.items()},
-        "id_to_append": {str(v): int(k) for k, v in append_map.items()},
-    }
     maps_path.write_text(json.dumps(maps_payload, indent=2), encoding="utf-8")
     print(f"Wrote edit maps -> {maps_path}")
 
@@ -99,11 +109,12 @@ def convert_csv_to_gec(
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Convert Grammarly/QuillBot CSV into TypoFormer GEC JSONL format.")
-    parser.add_argument("--csv", default="data/dataset/grammarly_quillbot_dataset.csv", help="Input CSV path")
+    parser = argparse.ArgumentParser(description="Convert CSV into TypoFormer GEC JSONL format.")
+    parser.add_argument("--csv", default="data/dataset/wine_train.csv", help="Input CSV path")
     parser.add_argument("--tokenizer", default="data/tokenizer/tokenizer.json", help="BPE Tokenizer path")
-    parser.add_argument("--out", default="data/processed/gec/grammarly_quillbot.jsonl", help="Output JSONL path")
-    parser.add_argument("--maps", default="data/processed/gec/grammarly_quillbot_edit_maps.json", help="Output edit maps JSON path")
+    parser.add_argument("--out", default="data/processed/gec/v5/train.jsonl", help="Output JSONL path")
+    parser.add_argument("--maps", default="data/processed/gec/v5/edit_maps.json", help="Output edit maps JSON path")
+    parser.add_argument("--base-maps", default=None, help="Optional existing edit maps JSON to preserve class mappings")
     parser.add_argument("--k-replace", type=int, default=2048)
     parser.add_argument("--k-append", type=int, default=2048)
     args = parser.parse_args()
@@ -113,6 +124,7 @@ def main():
         tokenizer_path=args.tokenizer,
         out_jsonl=args.out,
         maps_path=args.maps,
+        base_maps_path=args.base_maps,
         k_replace=args.k_replace,
         k_append=args.k_append,
     )
