@@ -42,10 +42,10 @@ BERT (Devlin et al., 2018) is fundamentally a static masked language modeling (M
 | **Generative Autocomplete** | **Incapable** (Bidirectional MLM only; generating next word requires artificial masking loops) | **Native Causal Mode** (Swappable triangular causal mask enables immediate top-K next-token logits) | **Single Unified Trunk**: One model serves both autocomplete and grammar correction. |
 | **Typo & OOV Robustness** | **Brittle WordPiece** (A misspelling like `teh` or `recieving` splits into random fragments `['te', '##h']`) | **Gated Character-CNN Highway** (Embeds raw UTF-8 token bytes via parallel 1D conv filters) | **Typo Immunity**: Never blinded by unknown character corruptions or casing anomalies. |
 | **Position Encoding** | **Absolute Learned Positional** (Fixed length 512, poor relative translation invariance) | **Rotary Position Embeddings (RoPE)** (Frequency-based relative query-key rotation) | **Sequence Extrapolation**: Superior relative token distance awareness across cursor movements. |
-| **Attention Mechanism** | **Multi-Head Attention (MHA)** (12 Q, 12 K, 12 V heads; quadratic memory bandwidth) | **Grouped Query Attention (GQA)** (12 Query heads, 4 Key/Value heads — 3:1 ratio) | **3x Memory Reduction**: Drastically reduces KV memory traffic during interactive streaming. |
+| **Attention Mechanism** | **Multi-Head Attention (MHA)** (12 Q, 12 K, 12 V heads; quadratic memory bandwidth) | **Grouped Query Attention (GQA)** (12 Query heads, 4 Key/Value heads -  3:1 ratio) | **3x Memory Reduction**: Drastically reduces KV memory traffic during interactive streaming. |
 | **Feed-Forward Backbone** | **GeLU + LayerNorm** (Classical additive bias normalization) | **SwiGLU + Pre-RMSNorm** (Gated Swish linear units with zero-mean scaling) | **LLaMA/Mistral-Grade Capacity**: Higher expressivity per parameter without gradient instability. |
-| **GEC Formulation** | **Sequence-to-Sequence Autoregressive** (Prone to hallucinating new phrases; 300–600ms latency) | **Constrained Atomic Edit-Tagging** (`KEEP`, `DELETE`, `CASE`, `REPLACE`, `APPEND`) | **Zero Hallucination**: Guaranteed content fidelity; 99.2% clean sentence preservation. |
-| **Runtime Latency** | **150ms – 400ms** on CPU (FP32) | **< 10ms** on CPU (INT8 Quantized ONNX) | **Real-Time Keystroke Budget**: Executes comfortably inside the 16ms 60 FPS display window. |
+| **GEC Formulation** | **Sequence-to-Sequence Autoregressive** (Prone to hallucinating new phrases; 300-600ms latency) | **Constrained Atomic Edit-Tagging** (`KEEP`, `DELETE`, `CASE`, `REPLACE`, `APPEND`) | **Zero Hallucination**: Guaranteed content fidelity; 99.2% clean sentence preservation. |
+| **Runtime Latency** | **150ms - 400ms** on CPU (FP32) | **< 10ms** on CPU (INT8 Quantized ONNX) | **Real-Time Keystroke Budget**: Executes comfortably inside the 16ms 60 FPS display window. |
 
 ---
 
@@ -55,7 +55,7 @@ BERT (Devlin et al., 2018) is fundamentally a static masked language modeling (M
   <img src="assets/typoformer_architecture.png" alt="TypoFormer Neural Architecture Diagram" width="560"/>
 </p>
 <p align="center">
-  <em>Figure 1: TypoFormer Full Internal Neural Architecture — Fusing byte-level subwords with multi-scale character convolutions, Pre-RMSNorm grouped-query attention (GQA), rotary embeddings (RoPE), SwiGLU feed-forward networks, and multi-task dual heads for offline autocomplete and grammar error correction.</em>
+  <em>Figure 1: TypoFormer Full Internal Neural Architecture -  Fusing byte-level subwords with multi-scale character convolutions, Pre-RMSNorm grouped-query attention (GQA), rotary embeddings (RoPE), SwiGLU feed-forward networks, and multi-task dual heads for offline autocomplete and grammar error correction.</em>
 </p>
 
 
