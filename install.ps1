@@ -93,6 +93,7 @@ if ($LocalPayload) {
     
     $DownloadUrls = @(
         "https://huggingface.co/fahiiim/TypoFormer/resolve/main/TypoFormer-win-x64.zip",
+        "https://github.com/fahiiim/TyPoTaKer/releases/download/v2.0.0/TypoFormer-win-x64.zip",
         "https://github.com/fahiiim/TyPoTaKer/releases/latest/download/TypoFormer-win-x64.zip",
         "https://github.com/fahiiim/TyPoTaKer/releases/download/v1.0.0/TypoFormer-win-x64.zip"
     )
