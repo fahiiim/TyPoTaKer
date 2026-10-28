@@ -51,43 +51,47 @@ BERT (Devlin et al., 2018) is fundamentally a static masked language modeling (M
 
 ## TypoFormer Core Architecture
 
+<p align="center">
+  <img src="assets/typoformer_architecture.png" alt="TypoFormer Neural Architecture Diagram" width="560"/>
+</p>
+<p align="center">
+  <em>Figure 1: TypoFormer Full Internal Neural Architecture — Fusing byte-level subwords with multi-scale character convolutions, Pre-RMSNorm grouped-query attention (GQA), rotary embeddings (RoPE), SwiGLU feed-forward networks, and multi-task dual heads for offline autocomplete and grammar error correction.</em>
+</p>
+
 ```text
-                               +---------------------------------------------+
-                               |           DUAL-TASK OUTPUT HEADS            |
-                               +---------------------------------------------+
-                                      /                               \
-               [CAUSAL LM HEAD]      /                                 \      [GEC EDIT-TAG HEAD]
-             Top-K Token Logits     /                                   \   KEEP / DELETE / CASE /
-              (Tied Embeddings)    /                                     \     REPLACE / APPEND
-                                  v                                       v
-                     +--------------------------+           +--------------------------+
-                     | Causal Prediction Head   |           | Atomic Edit Classifier   |
-                     | Linear(768 -> 16,000)    |           | Linear(768 -> 1,024)     |
-                     +--------------------------+           +--------------------------+
-                                  ^                                       ^
-                                  |                                       |
-                     +-----------------------------------------------------------------+
-                     |                 STAGE-AWARE TRANSFORMER TRUNK                   |
-                     |        10 Transformer Blocks (Pre-RMSNorm + SwiGLU + RoPE)      |
-                     |             Grouped Query Attention (12 Q-Heads, 4 KV-Heads)    |
-                     +-----------------------------------------------------------------+
-                                                       ^
-                                                       |
-                                    +------------------------------------+
-                                    |     GATED FUSION HIGHWAY (α)       |
-                                    |  h = α · E_bpe + (1 - α) · E_char  |
-                                    +------------------------------------+
-                                           /                      \
-                                          /                        \
-                                         v                          v
-                     +--------------------------+       +------------------------------+
-                     | Byte-Level BPE Embedding |       | Multi-Scale Character-CNN    |
-                     | Vocabulary: 16,000       |       | Parallel 1D Conv (k=2,3,5,8) |
-                     | Dim: 768                 |       | MaxPool -> Linear(768)       |
-                     +--------------------------+       +------------------------------+
-                                  ^                                    ^
-                                  |                                    |
-                            Input BPE IDs                       Raw UTF-8 Bytes
+                             [TASK 1: AUTOCOMPLETE]              [TASK 2: GRAMMAR & TYPO]
+                            Next-Word Probabilities             Keystroke Edit Tag Classes
+                                       ^                                    ^
+                                   (Softmax)                            (Softmax)
+                                       |                                    |
+                            Linear(d -> 16,000)                  Linear(d -> 6,148 tags)
+                                       \                                    /
+                                        +-----------------+----------------+
+                                                          |
+                                                  [Final RMSNorm]
+                                                          |
+                                      +---------------------------------------+
+                                      |   Nx Transformer Backbone Block       |
+                                      |   - Add & Residual (FFN Bypass)       |
+                                      |   - SwiGLU FFN: W2(SiLU(W1x) * W3x)   |
+                                      |   - RMSNorm (Pre-LN)                  |
+                                      |   - Add & Residual (Attention Bypass) |
+                                      |   - GQA Attention (RoPE + QK-RMSNorm) |
+                                      |   - RMSNorm (Pre-LN)                  |
+                                      +---------------------------------------+
+                                                          ^
+                                                          |
+                                               (+) Gated Highway Fusion
+                                                      /        \
+                                                     /          \ * alpha (gate)
+                                                    v            v
+                                        +-----------------+  +----------------------+
+                                        | BPE Embedding   |  | Gated Char-CNN       |
+                                        | V = 16,000      |  | Conv1D x 2 + MaxPool |
+                                        +-----------------+  +----------------------+
+                                                ^                    ^
+                                                |                    |
+                                           Token IDs            Raw UTF-8 Bytes
 ```
 
 ---
