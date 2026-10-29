@@ -50,7 +50,7 @@ def upload():
         folder_path=str(LOCAL_DIR),
         repo_id=REPO_ID,
         repo_type="model",
-        commit_message="Release TypoFormer Stage 2 INT8 with Model Architecture Diagram & Polished Model Card",
+        commit_message="Release TypoFormer Stage 2 Trainable PyTorch Checkpoints, Standalone Architecture, and Fine-Tuning Recipes",
     )
     print("Distribution folder successfully uploaded to Hugging Face Hub!")
 
