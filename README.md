@@ -8,7 +8,8 @@
 </p>
 
 <p align="center">
-  <a href="https://huggingface.co/fahiiim/TypoFormer"><img src="https://img.shields.io/badge/Hugging%20Face-fahiiim%2FTypoFormer-ffd21e?style=for-the-badge&logo=huggingface&logoColor=black" alt="Hugging Face Model"/></a>
+  <a href="https://huggingface.co/fahiiim/TypoFormer"><img src="https://img.shields.io/badge/Model-fahiiim%2FTypoFormer-ffd21e?style=for-the-badge&logo=huggingface&logoColor=black" alt="Hugging Face Model"/></a>
+  <a href="https://huggingface.co/datasets/fahiiim/TypoFormer-Synthetic-Dataset"><img src="https://img.shields.io/badge/Dataset-53k_Synthetic_GEC_%26_LM-E67E22?style=for-the-badge&logo=huggingface&logoColor=white" alt="Hugging Face Dataset"/></a>
   <img src="https://img.shields.io/badge/Author-Md._Fahim_Sarker_Mridul-1E293B?style=for-the-badge&logo=github&logoColor=white" alt="Author"/>
   <img src="https://img.shields.io/badge/Model-TypoFormer--v2.4-4B5320?style=for-the-badge&logo=target&logoColor=white" alt="Model Version"/>
   <img src="https://img.shields.io/badge/Parameters-93.88M_INT8-556B2F?style=for-the-badge&logo=cpu&logoColor=white" alt="Parameters"/>
