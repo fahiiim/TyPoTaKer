@@ -2,7 +2,7 @@
   <img src="assets/typoformer_logo.png" alt="TypoFormer Logo" width="480"/>
 </p>
 
-# TypoFormer — User Installation & Setup Guide
+# TypoFormer: User Installation & Setup Guide
 
 **TypoFormer** is an ultra-fast, 100% local, offline AI keystroke companion and grammar engine for Windows. Powered by our custom **Stage 2 (94M parameter) ONNX INT8 Language Model & Edit-Tagging GEC**, TypoFormer provides Grammarly-grade real-time suggestions and zero-lag autocomplete anywhere in Windows in under **15 milliseconds** per keystroke without sending a single byte to the cloud.
 
