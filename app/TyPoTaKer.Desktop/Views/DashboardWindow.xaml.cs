@@ -292,30 +292,35 @@ public partial class DashboardWindow : Window
 
     private void ClearAllHighlights()
     {
-        _detectedErrors.Clear();
-        RefreshErrorDisplay();
-
         _isApplyingFix = true;
         PlaygroundRichTextBox.TextChanged -= OnPlaygroundTextChanged;
         try
         {
-            foreach (var block in PlaygroundRichTextBox.Document.Blocks)
-            {
-                if (block is Paragraph p)
-                {
-                    foreach (var inline in p.Inlines)
-                    {
-                        inline.TextDecorations = null;
-                        inline.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#0F172A"));
-                        inline.Background = Brushes.Transparent;
-                    }
-                }
-            }
+            InternalClearHighlights();
         }
         finally
         {
             PlaygroundRichTextBox.TextChanged += OnPlaygroundTextChanged;
             _isApplyingFix = false;
+        }
+    }
+
+    private void InternalClearHighlights()
+    {
+        _detectedErrors.Clear();
+        RefreshErrorDisplay();
+
+        foreach (var block in PlaygroundRichTextBox.Document.Blocks)
+        {
+            if (block is Paragraph p)
+            {
+                foreach (var inline in p.Inlines)
+                {
+                    inline.TextDecorations = null;
+                    inline.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#0F172A"));
+                    inline.Background = Brushes.Transparent;
+                }
+            }
         }
     }
 
@@ -327,7 +332,7 @@ public partial class DashboardWindow : Window
         PlaygroundRichTextBox.TextChanged -= OnPlaygroundTextChanged;
         try
         {
-            ClearAllHighlights();
+            InternalClearHighlights();
             if (candidates == null || candidates.Count == 0) return;
 
             // TypoFormer Red Underline + Soft Pink/Red Highlight
