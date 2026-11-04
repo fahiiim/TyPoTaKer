@@ -8,7 +8,6 @@ dist/
 build/
 .venv/
 venv/
-.env
 .python-version
 
 # Large datasets (do not commit raw 800MB jsonl files or raw txt dumps)
@@ -51,7 +50,6 @@ wandb/
 
 # IDE
 .idea/
-.vscode/
 *.swp
 
 # OS
@@ -73,3 +71,9 @@ obj/
 *.user
 installer/payload/
 installer/*.zip
+config.bat
+node_modules
+branch_structure.json
+temp_auto_push.bat
+temp_interactive_push.bat
+.gitignore
