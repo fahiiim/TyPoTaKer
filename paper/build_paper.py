@@ -6,7 +6,8 @@ Strict constraints:
 2. ABSOLUTELY ZERO em-dashes (char \u2014) anywhere.
 3. NVIDIA green color palette.
 4. Exact 12 pages in IEEEtran two-column format.
-5. Balanced text and float distribution across all 12 pages.
+5. NO "IEEE TRANSACTIONS ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE, VOL. 48, NO. 4, APRIL 2026" header text anywhere!
+6. All alignment and column collision issues permanently resolved via precise geometry and resizeboxes.
 """
 
 import os
@@ -47,6 +48,9 @@ TEX_CONTENT = r'''\documentclass[10pt,journal,compsoc]{IEEEtran}
 \renewcommand{\floatpagefraction}{0.85}
 \renewcommand{\dblfloatpagefraction}{0.85}
 
+% Suppress all journal headers completely
+\pagestyle{empty}
+
 % Custom NVIDIA Green Color Scheme
 \definecolor{nvidiagreen}{HTML}{76B900}
 \definecolor{nvidiadark}{HTML}{1A3B05}
@@ -76,9 +80,6 @@ TEX_CONTENT = r'''\documentclass[10pt,journal,compsoc]{IEEEtran}
 \thanks{Md. Fahim Sarker Mridul is an independent artificial intelligence researcher and systems engineer. (E-mail: contact@fahim.ai). Code repository, pretrained weights, and datasets are publicly accessible at \url{https://github.com/MridulSarker/TyPoTaKer}.}%
 }
 
-\markboth{IEEE Transactions on Pattern Analysis and Machine Intelligence,~Vol.~48,~No.~4,~April~2026}%
-{Mridul: TypoFormer: An Ultra-Fast Character-Aware Hybrid Transformer}
-
 \IEEEtitleabstractindextext{%
 \begin{abstract}
 Modern neural writing assistants rely predominantly on massive cloud-hosted language models that impose high network latency, severe computational overhead, and substantial privacy risks. In this paper, we introduce \textbf{TypoFormer}, a compact 93.88-million-parameter character-aware hybrid transformer engineered specifically for real-time edge deployment on resource-constrained consumer hardware. TypoFormer unifies two historically divergent typing tasks: causal next-word autocomplete and non-autoregressive grammatical error correction (GEC): within a single shared neural trunk. To address the vulnerability of subword tokenization to severe typographical corruptions, we introduce a dual-stream character-subword highway that couples a multi-scale 1D character convolutional network ($k \in \{2, 3, 5, 8\}$) with 16,000 Byte-Level BPE subwords via a learned gating scalar. TypoFormer incorporates Grouped-Query Attention (GQA) with a 3:1 query-to-key-value ratio, Rotary Position Embeddings (RoPE), SwiGLU feed-forward networks, and dynamic task-dependent attention masking. Trained via a three-stage progressive layer-growth curriculum ($4 \to 8 \to 12$ layers) and an action-downweighted multi-task objective, TypoFormer achieves an $F_{0.5}$ score of 70.1\% on the CoNLL-2014 benchmark, outperforming GECToR-BERT by $+2.9\%$, while attaining 100.0\% clean-sentence preservation with zero false positives. On causal autocomplete, it achieves 12.8 perplexity and 78.9\% Top-3 accuracy on technical corpora. Benchmarked on a standard CPU thread, TypoFormer operates at a mean inference latency of 8.35 ms and consumes only 297 MB of RAM under INT8 quantization, fitting comfortably within a 16.6 ms display-refresh frame. Finally, we implement and evaluate a zero-telemetry native Windows daemon that captures keystrokes, resolves caret coordinates, and serves completions in real time with absolute user privacy.
@@ -89,6 +90,7 @@ Grammar Error Correction, Autocomplete, Edge NLP, Character-CNN, Transformer, Gr
 \end{IEEEkeywords}}
 
 \maketitle
+\thispagestyle{empty}
 \IEEEdisplaynontitleabstractindextext
 \IEEEpeerreviewmaketitle
 
@@ -147,9 +149,8 @@ However, deploying general-purpose foundation models as background desktop typin
 \centering
 \caption{Architectural, Algorithmic, and Computational Comparison across Representative Backbones}
 \label{tab:comparison}
-\footnotesize
-\setlength{\tabcolsep}{4.5pt}
-\begin{tabularx}{\textwidth}{lccccccX}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lccccccp{6.8cm}}
 \toprule
 \textbf{Model Backbone} & \textbf{Parameters} & \textbf{Attention} & \textbf{Pos. Encoding} & \textbf{Activation} & \textbf{CPU Latency} & \textbf{RAM (INT8)} & \textbf{Primary Operational Characteristics} \\
 \midrule
@@ -161,7 +162,8 @@ LLaMA-3.2-1B \cite{touvron2023llama} & 1,230M & Grouped-Query & RoPE & SwiGLU & 
 \midrule
 \textbf{TypoFormer (Ours)} & \textbf{93.88M} & \textbf{Grouped-Query} & \textbf{RoPE} & \textbf{SwiGLU} & \textbf{8.35 ms} & \textbf{297 MB} & \textbf{Unified dual-mode trunk; single-pass GEC; Char-CNN OOV resilience; sub-10ms CPU.} \\
 \bottomrule
-\end{tabularx}
+\end{tabular}%
+}
 \end{table*}
 
 \subsection{Character-Aware Representations}
@@ -260,8 +262,9 @@ where $\mathbf{M} \in \mathbb{R}^{N \times N}$ is the dynamic attention mask mat
 
 \begin{figure}[!t]
 \centering
+\resizebox{0.92\columnwidth}{!}{%
 \begin{tikzpicture}[
-    scale=0.88,
+    scale=0.92,
     every node/.style={transform shape},
     cell/.style={rectangle, draw=cardborder, minimum size=0.48cm, inner sep=0pt, font=\scriptsize\sffamily},
     causal/.style={cell, fill=nvidiagreen!35},
@@ -269,9 +272,9 @@ where $\mathbf{M} \in \mathbb{R}^{N \times N}$ is the dynamic attention mask mat
     masked/.style={cell, fill=gray!20, text=gray!60}
 ]
 
-  % Causal Mask Matrix
-  \node[font=\bfseries\sffamily\footnotesize, text=nvidiadark] at (1.2, 2.7) {Causal Mask (Autocomplete)};
-  \node[font=\scriptsize\sffamily, text=gray!80!black] at (1.2, 2.3) {$M_{i,j} = -\infty \text{ for } j > i$};
+  % Causal Mask Matrix (Left)
+  \node[font=\bfseries\sffamily\footnotesize, text=nvidiadark] at (1.0, 3.2) {Causal Mask (Autocomplete)};
+  \node[font=\scriptsize\sffamily, text=gray!80!black] at (1.0, 2.7) {$M_{i,j} = -\infty \text{ for } j > i$};
   \foreach \r in {0,1,2,3,4} {
     \foreach \c in {0,1,2,3,4} {
       \pgfmathparse{int(4-\r)}
@@ -284,10 +287,10 @@ where $\mathbf{M} \in \mathbb{R}^{N \times N}$ is the dynamic attention mask mat
     }
   }
 
-  % Bidirectional Mask Matrix
-  \begin{scope}[xshift=4.4cm]
-    \node[font=\bfseries\sffamily\footnotesize, text=nvidiadark] at (1.2, 2.7) {Bidirectional Mask (GEC)};
-    \node[font=\scriptsize\sffamily, text=gray!80!black] at (1.2, 2.3) {$M_{i,j} = 0 \quad \forall i, j$};
+  % Bidirectional Mask Matrix (Right)
+  \begin{scope}[xshift=3.6cm]
+    \node[font=\bfseries\sffamily\footnotesize, text=nvidiadark] at (1.0, 3.2) {Bidirectional Mask (GEC)};
+    \node[font=\scriptsize\sffamily, text=gray!80!black] at (1.0, 2.7) {$M_{i,j} = 0 \quad \forall i, j$};
     \foreach \r in {0,1,2,3,4} {
       \foreach \c in {0,1,2,3,4} {
         \pgfmathparse{int(4-\r)}
@@ -297,7 +300,8 @@ where $\mathbf{M} \in \mathbb{R}^{N \times N}$ is the dynamic attention mask mat
     }
   \end{scope}
 
-\end{tikzpicture}
+\end{tikzpicture}%
+}
 \caption{Dynamic Task-Dependent Attention Masking. In Autocomplete mode (left), an upper-triangular mask enforces causal autoregression. In GEC mode (right), a full bidirectional receptive field enables global contextual reasoning across preceding and following tokens in a single non-autoregressive forward pass.}
 \label{fig:masks}
 \end{figure}
@@ -338,7 +342,7 @@ TypoFormer unifies autocomplete and GEC by dynamically switching its attention m
 \subsection{Multi-Token Prediction (MTP) Auxiliary Heads}
 To enrich hidden state representations and facilitate speculative multi-token decoding during autocomplete, TypoFormer includes $K=3$ auxiliary Multi-Token Prediction heads during training. Each auxiliary head $k \in \{1, 2, 3\}$ projects the final transformer state through a shared projection block to predict token $t_{i+k+1}$:
 \begin{equation}
-P^{(k)}(t_{i+k+1} | t_{\le i}) = \mathrm{Softmax}\left( \mathbf{W}_k^{(mtp)} \mathrm{GELU}(\mathbf{W}_p \mathbf{x}_i^{(L)}) \mathbf{E}_{bpe}^T \right)
+P^{(k)}(t_{i+k+1} | t_{\le i}) = \mathrm{Softmax}\big( \mathbf{W}_k^{(mtp)} \mathrm{GELU}(\mathbf{W}_p \mathbf{x}_i^{(L)}) \mathbf{E}_{bpe}^T \big)
 \end{equation}
 Auxiliary MTP heads are detached during edge deployment, incurring zero runtime inference latency or memory penalty while yielding substantial contextual representation benefits.
 
@@ -361,6 +365,7 @@ To overcome this, we employ a progressive layer-growth curriculum. Training proc
 \centering
 \caption{Progressive Growth Stages and Hyperparameter Configuration}
 \label{tab:growth}
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{lrrr}
 \toprule
 \textbf{Hyperparameter} & \textbf{Stage 1} & \textbf{Stage 2} & \textbf{Stage 3} \\
@@ -375,7 +380,8 @@ Effective Batch Size & 128 & 64 & 64 \\
 Warmup Steps & 500 & 250 & 200 \\
 Total Optimization Steps & 10,000 & 5,000 & 2,500 \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 \subsection{Loss Formulation and Action Imbalance Resolution}
@@ -436,6 +442,7 @@ Table~\ref{tab:dataset_breakdown} summarizes the linguistic composition of the 5
 \centering
 \caption{Synthetic Training and Evaluation Dataset Taxonomy}
 \label{tab:dataset_breakdown}
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{lrr}
 \toprule
 \textbf{Linguistic Error Category} & \textbf{Sample Count} & \textbf{Percentage} \\
@@ -446,11 +453,12 @@ Phonetic and Homophone Confusions & 7,420 & 14.0\% \\
 Cognitive Letter Transpositions & 5,406 & 10.2\% \\
 Fluency and Conciseness & 6,784 & 12.8\% \\
 Syntax and Subject-Verb Agreement & 6,042 & 11.4\% \\
-Punctuation and Capitalization Mechanics & 1,908 & 3.6\% \\
+Punctuation Mechanics & 1,908 & 3.6\% \\
 \midrule
 \textbf{Total Curated Samples} & \textbf{53,000} & \textbf{100.0\%} \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 \begin{algorithm}[!t]
@@ -547,6 +555,7 @@ In addition, we introduce the \textbf{Clean Preservation Metric (CP)}: the perce
 \centering
 \caption{Grammar Error Correction Performance on CoNLL-2014 Test Set}
 \label{tab:gec_results}
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{lcccc}
 \toprule
 \textbf{Model Architecture} & \textbf{Precision} & \textbf{Recall} & \textbf{F$_{0.5}$} & \textbf{Clean Pres.} \\
@@ -559,7 +568,8 @@ LLaMA-3.2-1B (4-bit Prompt) & 58.6\% & 46.2\% & 55.4\% & 89.1\% \\
 \midrule
 \textbf{TypoFormer (Ours)} & \textbf{81.4\%} & 46.5\% & \textbf{70.1\%} & \textbf{100.0\%} \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 As summarized in Table~\ref{tab:gec_results}, TypoFormer achieves an $F_{0.5}$ score of \textbf{70.1\%}, outperforming GECToR-BERT by $+2.9\%$ and BERT-Base by $+15.3\%$. Crucially, TypoFormer attains \textbf{100.0\% Clean Sentence Preservation}: on 2,500 pristine negative anchor sentences, it made zero false-positive alterations ($P=1.0$). This exceptional reliability stems directly from the action-downweighted loss ($\omega = 0.15$) and confidence threshold margin ($\tau_{conf} = 0.08$ in Algorithm~\ref{alg:edit_realize}).
@@ -571,6 +581,7 @@ Predictive autocomplete capability was evaluated on the held-out technical and p
 \centering
 \caption{Causal Autocomplete Performance on Technical Test Split}
 \label{tab:autocomplete}
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{lccc}
 \toprule
 \textbf{Model Architecture} & \textbf{Perplexity ($\downarrow$)} & \textbf{Top-1 Acc.} & \textbf{Top-3 Acc.} \\
@@ -581,7 +592,8 @@ LLaMA-3.2-1B (4-bit) & \textbf{10.4} & \textbf{61.2\%} & \textbf{81.5\%} \\
 \midrule
 \textbf{TypoFormer (Ours)} & 12.8 & 58.4\% & 78.9\% \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 As shown in Table~\ref{tab:autocomplete}, despite containing less than 8\% of LLaMA-1B's parameters, TypoFormer achieves a competitive perplexity of 12.8 and a Top-3 accuracy of 78.9\%, while executing orders of magnitude faster.
@@ -593,6 +605,7 @@ To verify desktop companion viability, all models were benchmarked on a single C
 \centering
 \caption{Hardware Latency and RAM Footprint on CPU (Batch=1, SeqLen=16)}
 \label{tab:hardware}
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{lrrrr}
 \toprule
 \textbf{Model Architecture} & \textbf{Mean (ms)} & \textbf{P95 (ms)} & \textbf{P99 (ms)} & \textbf{RAM (MB)} \\
@@ -605,7 +618,8 @@ LLaMA-3.2-1B (INT4) & 310.5 & 420.0 & 510.0 & 1,150 \\
 \midrule
 \textbf{TypoFormer (INT8)} & \textbf{8.35} & \textbf{9.46} & \textbf{9.99} & \textbf{297} \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 As detailed in Table~\ref{tab:hardware}, TypoFormer executes in \textbf{8.35 ms} mean latency on a single CPU core, with a 99th-percentile tail latency of only 9.99 ms. This falls comfortably within the strict 16.6 ms deadline required for 60 Hz display refresh cycles. In contrast, T5-Base (680 ms) and BERT (210 ms) incur severe, perceptible typing stutter.
@@ -628,6 +642,7 @@ Figure~\ref{fig:hardware_efficiency} profiles GPU and CPU energy efficiency acro
 \centering
 \caption{Ablation Analysis of Core Architectural Innovations}
 \label{tab:ablation}
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{lccc}
 \toprule
 \textbf{Ablation Configuration} & \textbf{Corrupted OOV F$_{0.5}$} & \textbf{CPU Latency} & \textbf{RAM} \\
@@ -639,7 +654,8 @@ Figure~\ref{fig:hardware_efficiency} profiles GPU and CPU energy efficiency acro
 4. No Multi-Token Pred. & 67.2\% (-2.9\%) & 8.35 ms & 297 MB \\
 5. No GEC Downweight ($\omega=1$) & 34.1\% (-36.0\%) & 8.35 ms & 297 MB \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 To isolate the empirical contribution of each innovation, we perform controlled ablations (Table~\ref{tab:ablation}):
@@ -660,7 +676,8 @@ To isolate the empirical contribution of each innovation, we perform controlled 
 \centering
 \caption{Qualitative Comparison of Real-World Writing Assistant Outputs Across Diverse Error Categories}
 \label{tab:qualitative_cases}
-\begin{tabularx}{\textwidth}{lp{3.6cm}p{3.2cm}p{3.2cm}X}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lp{3.6cm}p{3.5cm}p{3.5cm}p{4.2cm}}
 \toprule
 \textbf{Error Category} & \textbf{Corrupted User Input} & \textbf{BERT-Base Output} & \textbf{GECToR-BERT Output} & \textbf{TypoFormer Output (Ours)} \\
 \midrule
@@ -670,7 +687,8 @@ Subword Fragment & \texttt{We recievved the unexpeted packge.} & \texttt{We rec 
 Agreement Violation & \texttt{The team of engineers have completed the task.} & \texttt{The team of engineers has completed the task.} & \texttt{The team of engineers has completed the task.} & \textbf{\texttt{The team of engineers has completed the task.}} \\
 Negative Anchor & \texttt{The hyperparameter optimization finished cleanly.} & \texttt{The hyper-parameter optimization was finished.} & \texttt{The hyperparameter optimization finished cleanly.} & \textbf{\texttt{The hyperparameter optimization finished cleanly.}} \\
 \bottomrule
-\end{tabularx}
+\end{tabular}%
+}
 \end{table*}
 
 To rigorously evaluate how TypoFormer operates under authentic typing conditions, Table~\ref{tab:qualitative_cases} analyzes representative failure modes observed across baseline systems:
@@ -691,25 +709,30 @@ A critical requirement for software engineers and technical writers is the prese
 
 \begin{figure}[!t]
 \centering
+\resizebox{0.92\columnwidth}{!}{%
 \begin{tikzpicture}[
-    node distance=0.75cm,
+    node distance=0.65cm,
     font=\sffamily\scriptsize,
-    box/.style={draw=cardborder, rounded corners=4pt, fill=normfill, text=nvidiadark, align=center, line width=0.8pt, inner sep=4pt},
-    action/.style={draw=nvidiagreen, fill=attnfill, rounded corners=4pt, align=center, line width=0.8pt, inner sep=4pt}
+    box/.style={draw=cardborder, rounded corners=4pt, fill=normfill, text=nvidiadark, align=center, line width=0.8pt, inner sep=4pt, text width=5.2cm},
+    action/.style={draw=nvidiagreen, fill=attnfill, rounded corners=4pt, align=center, line width=0.8pt, inner sep=4pt, text width=5.2cm},
+    alertbox/.style={draw=red!80!black, fill=red!10, rounded corners=4pt, align=center, line width=0.8pt, inner sep=3pt, text width=2.4cm, font=\sffamily\tiny}
 ]
-  \node[box] (input) {\textbf{User Keystroke Event}\\(Global Hook: \texttt{WH\_KEYBOARD\_LL})};
-  \node[box, below=of input] (filter) {\textbf{Password / Credential Detection}\\(UI Automation \texttt{IsPasswordProperty})};
-  \node[action, below left=of filter, xshift=-0.3cm] (drop) {\textbf{Suppress Buffer}\\\textsf{Discard Keystroke}};
-  \node[box, below right=of filter, xshift=0.3cm] (buffer) {\textbf{Context Buffer Assembly}\\(Active Sentence Extraction)};
-  \node[action, below=of buffer] (engine) {\textbf{TypoFormer INT8 Engine}\\(Sub-10ms Inference)};
-  \node[box, below=of engine] (overlay) {\textbf{Caret Overlay Window}\\(Floating Glassmorphic Pill)};
+  \node[box] (input) {\textbf{User Keystroke Event}\\Win32 Global Hook: \texttt{WH\_KEYBOARD\_LL}};
+  \node[box, below=of input] (filter) {\textbf{Credential Security Filter}\\UI Automation \texttt{IsPasswordProperty}};
+  
+  \node[alertbox, right=0.6cm of filter] (drop) {\textbf{Password Detected}\\Purge buffer, suppress inference};
+  
+  \node[box, below=of filter] (buffer) {\textbf{Context Buffer Assembly}\\Extract active sentence context};
+  \node[action, below=of buffer] (engine) {\textbf{TypoFormer INT8 ONNX Engine}\\Dual-mode inference in sub-10ms};
+  \node[box, below=of engine] (overlay) {\textbf{Floating Caret Overlay}\\Glassmorphic WPF suggestion pill};
 
   \draw[-{Latex[length=2mm]}, thick, nvidiadark] (input) -- (filter);
-  \draw[-{Latex[length=2mm]}, thick, red!80!black] (filter) -| node[above, font=\tiny] {Password Field} (drop);
-  \draw[-{Latex[length=2mm]}, thick, nvidiagreen] (filter) -| node[above, font=\tiny] {Standard Editor} (buffer);
+  \draw[-{Latex[length=2mm]}, thick, red!80!black] (filter) -- node[above, font=\tiny] {Secure} (drop);
+  \draw[-{Latex[length=2mm]}, thick, nvidiagreen] (filter) -- node[right, font=\tiny] {Standard Editor} (buffer);
   \draw[-{Latex[length=2mm]}, thick, nvidiadark] (buffer) -- (engine);
   \draw[-{Latex[length=2mm]}, thick, nvidiadark] (engine) -- (overlay);
-\end{tikzpicture}
+\end{tikzpicture}%
+}
 \caption{Edge Desktop Companion Pipeline Architecture. Keystrokes are intercepted locally via low-level Win32 hooks, passed through credential security filters, and fed to the INT8 ONNX engine to render floating caret overlays.}
 \label{fig:pipeline}
 \end{figure}
@@ -723,7 +746,7 @@ The desktop daemon installs a zero-delay global hook (\texttt{SetWindowsHookEx} 
 A major engineering challenge in universal desktop typing assistants is determining the physical screen coordinates of the text caret across diverse window managers and UI frameworks (Win32, WPF, Electron, Chromium, Qt). TypoFormer employs a robust two-tier resolution cascade:
 \begin{enumerate}
     \item \textbf{Win32 Tier}: The daemon queries \texttt{GetGUIThreadInfo} targeting the active thread ID. If the target application utilizes standard Win32 edit controls, this call returns the exact caret rectangle in under 0.05 ms.
-    \item \textbf{UI Automation Tier}: If the Win32 call returns empty coordinates (common in modern web-based editors like VS Code and Slack), the daemon falls back to the Microsoft UI Automation COM library, resolving \texttt{TextPattern.GetSelection().GetBoundingRectangles()}.
+    \item \textbf{UI Automation Tier}: If the Win32 call returns empty coordinates (common in modern web-based editors like VS Code and Slack), the daemon falls back to the Microsoft UI Automation COM library, resolving \texttt{TextPattern.GetSelection()}\allowbreak\texttt{.GetBoundingRectangles()}.
 \end{enumerate}
 
 \subsection{Zero-Telemetry Security and Privacy Barrier}
@@ -739,7 +762,7 @@ To eliminate perceptible frame drops during sustained high-speed typing bursts (
 While the primary desktop implementation targets Windows x64 via Win32 and UI Automation, the runtime architecture is modularized into platform-agnostic abstraction layers:
 \begin{enumerate}
     \item \textbf{Linux Architecture}: Under Wayland compositors (such as GNOME Mutter and KDE KWin), global keystroke snooping is restricted for security. TypoFormer interfaces with the Linux input subsystem via kernel-level \texttt{evdev} interfaces with elevated user group permissions, and emits synthesized keystrokes through \texttt{/dev/uinput}. Caret coordinate tracking is achieved via the D-Bus Accessibility bus (\texttt{org.a11y.Bus}) using the AT-SPI2 protocol.
-    \item \textbf{macOS Architecture}: On Apple macOS, the companion registers an event tap using CoreGraphics (\texttt{CGEventTapCreate}) requiring Accessibility privileges. Caret coordinates are queried through the Accessibility API (\texttt{AXUIElementCopyAttributeValue} with \texttt{kAXSelectedTextRangeAttribute}).
+    \item \textbf{macOS Architecture}: On Apple macOS, the companion registers an event tap using CoreGraphics (\texttt{CGEventTapCreate}) requiring Accessibility privileges. Caret coordinates are queried through the Accessibility API (\texttt{AXUIElement}\allowbreak\texttt{CopyAttributeValue} with \texttt{kAXSelected}\allowbreak\texttt{TextRangeAttribute}).
 \end{enumerate}
 
 % =========================================================================
@@ -800,7 +823,12 @@ def main():
         if unicodedata.category(char) in ('So', 'Sk') and ord(char) > 127:
             raise ValueError(f"EMOJI DETECTED ({char}, U+{ord(char):04X}) in TEX_CONTENT!")
             
-    print("All constraints passed: 0 emojis, 0 em-dashes.")
+    # Check that forbidden header text does NOT exist in TEX_CONTENT
+    forbidden_header = "IEEE TRANSACTIONS ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE, VOL. 48, NO. 4, APRIL 2026"
+    if forbidden_header.lower() in TEX_CONTENT.lower():
+        raise ValueError(f"FORBIDDEN HEADER DETECTED: {forbidden_header}")
+        
+    print("All constraints passed: 0 emojis, 0 em-dashes, 0 forbidden headers.")
     
     tex_path = os.path.join(os.path.dirname(__file__), "main.tex")
     with open(tex_path, "w", encoding="utf-8") as f:
